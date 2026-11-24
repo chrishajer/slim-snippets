@@ -244,7 +244,69 @@ $emoji_id = $make( '// emoji', 'global', array( 'post_excerpt' => "Party \u{1F38
 remove_filter( 'pre_get_col_charset', $utf8, 10 );
 $check( 'Party &#x1f389;' === get_post_field( 'post_excerpt', $emoji_id ), 'utf8mb3 description stores emoji as entities: ' . wp_json_encode( get_post_field( 'post_excerpt', $emoji_id ) ) );
 
-// 17. The Snippet box takes the Publish box's place (Screen Options cannot hide it), and there is no Slug box.
+// 17. Skip notes name the snippet.
+$skip = slim_snippets_import_snippet( array( 'name' => 'My shortcode', 'code' => '<p>x</p>', 'scope' => 'content' ) );
+$check( 'skipped' === $skip[0] && 0 === strpos( $skip[1], '"My shortcode": unsupported scope "content"' ), 'skip note names the snippet: ' . $skip[1] );
+
+// 18. Import status: inactive, keep the file's status, or active. Run-once
+// snippets never run; broken ones stay inactive with a note.
+$file = array(
+	'generator' => 'Code Snippets v3.9.6',
+	'snippets'  => array(
+		array( 'name' => 'imp on', 'code' => "add_filter( 'slim_imp_on', '__return_true' );", 'active' => true ),
+		array( 'name' => 'imp off', 'code' => '// off' ),
+		array( 'name' => 'imp once', 'code' => "echo 'imp-once-ran';", 'scope' => 'single-use', 'active' => true ),
+		array( 'name' => 'imp trashed', 'code' => '// trashed', 'trashed' => true ),
+		array( 'name' => 'imp broken', 'code' => 'this is not php', 'active' => true ),
+	),
+);
+$want = array(
+	'inactive' => array( 0, 4, 0, 1 ),
+	'keep'     => array( 1, 3, 1, 0 ),
+	'active'   => array( 2, 2, 0, 1 ),
+);
+foreach ( $want as $mode => $expect ) {
+	$before = $latest();
+	ob_start();
+	list( $counts, $notes ) = slim_snippets_import_files( array( $file, array( 'nope' => 1 ) ), $mode );
+	$out = ob_get_clean();
+	foreach ( get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => array( 'publish', 'draft', 'trash' ), 'numberposts' => -1, 'fields' => 'ids' ) ) as $new_id ) {
+		if ( $new_id > $before ) {
+			$slim_made[] = $new_id;
+		}
+	}
+	$got    = array( $counts['active'], $counts['inactive'], $counts['trash'], $counts['skipped'] - 1 );
+	$broken = 'inactive' !== $mode && preg_grep( '/^"imp broken" left inactive: /', $notes );
+	$check(
+		$expect === $got && '' === $out && ( 'inactive' === $mode || $broken ) && in_array( 'A file is not a snippets export.', $notes, true ),
+		"import status '$mode': " . wp_json_encode( $got ) . ' ' . wp_json_encode( $notes )
+	);
+}
+
+// 19. A function or class declared twice is caught before the test run, also
+// against an active snippet that does not run on this screen.
+$fn1 = $make( 'function slim_check_dupe_fn() { return 1; }' );
+$fn2 = $make( 'function slim_check_dupe_fn() { return 2; }' );
+$grd = $make( "if ( ! function_exists( 'slim_check_dupe_fn' ) ) {\n\tfunction slim_check_dupe_fn() { return 3; }\n}\n\$a = stdClass::class;\n\$b = new class() {};\n\$c = function () {};\nclass Slim_Check_Class_A { function slim_check_dupe_fn() {} }" );
+$fe1 = $make( 'function &slim_check_fe_fn() { static $v = 1; return $v; }', 'front-end' );
+$fe2 = $make( 'function slim_check_fe_fn() {}' );
+$ns1 = $make( "namespace SlimCheck;\nclass Dupe {}" );
+$ns2 = $make( "namespace SlimCheck;\nclass Dupe {}" );
+slim_snippets_set_status( $fe1, 'publish' ); // Active, but front-end code never ran here.
+$r = array_map(
+	function ( $id ) {
+		return slim_snippets_activate( $id );
+	},
+	array( $fn1, $fn2, $grd, $fe2, $ns1, $ns2 )
+);
+$check(
+	'ok' === $r[0][0] && 'error' === $r[1][0] && false !== strpos( $r[1][1], 'Cannot redeclare function slim_check_dupe_fn()' )
+	&& 'ok' === $r[2][0] && 'error' === $r[3][0] && false !== strpos( $r[3][1], 'function slim_check_fe_fn()' )
+	&& 'ok' === $r[4][0] && 'error' === $r[5][0] && false !== strpos( $r[5][1], 'class SlimCheck\\Dupe' ),
+	'redeclared functions and classes blocked: ' . wp_json_encode( wp_list_pluck( $r, 1 ) )
+);
+
+// 20. The Snippet box takes the Publish box's place (Screen Options cannot hide it), and there is no Slug box.
 require_once ABSPATH . 'wp-admin/includes/admin.php';
 require_once ABSPATH . 'wp-admin/includes/meta-boxes.php';
 set_current_screen( 'slim_snippet' );

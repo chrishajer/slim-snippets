@@ -306,11 +306,97 @@ function slim_snippets_lint( $code ) {
 }
 
 /**
+ * Functions and classes the snippet declares at the top level, keyed
+ * "function:name" or "class:name" (lowercase, with the namespace).
+ * Declarations inside a block, such as an `if ( ! function_exists() )` guard,
+ * are left out because they are conditional.
+ *
+ * @param string $code Snippet code that parses.
+ * @return array<string, string> Key => label such as "function foo()".
+ */
+function slim_snippets_declarations( $code ) {
+	// ponytail: braced namespaces ("namespace X { }") and alternative-syntax ifs
+	// are not followed; a redeclaration there still ends in the fatal-error marker.
+	$skip   = array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT, T_OPEN_TAG );
+	$names  = array( T_STRING, T_NS_SEPARATOR, defined( 'T_NAME_QUALIFIED' ) ? T_NAME_QUALIFIED : T_STRING );
+	$kinds  = array( T_CLASS, T_INTERFACE, T_TRAIT, defined( 'T_ENUM' ) ? T_ENUM : T_CLASS );
+	$tokens = array();
+	foreach ( token_get_all( "<?php\n" . $code ) as $t ) {
+		if ( ! is_array( $t ) || ! in_array( $t[0], $skip, true ) ) {
+			$tokens[] = is_array( $t ) ? $t : array( $t, $t );
+		}
+	}
+
+	$found = array();
+	$depth = 0;
+	$ns    = '';
+	foreach ( $tokens as $i => list( $id ) ) {
+		if ( '{' === $id || T_CURLY_OPEN === $id || T_DOLLAR_OPEN_CURLY_BRACES === $id ) {
+			++$depth;
+			continue;
+		}
+		if ( '}' === $id ) {
+			--$depth;
+			continue;
+		}
+		$prev = $i ? $tokens[ $i - 1 ][0] : null;
+		$next = isset( $tokens[ $i + 1 ] ) ? $tokens[ $i + 1 ] : array( null, '' );
+		if ( $depth || T_USE === $prev ) {
+			continue;
+		}
+		if ( T_NAMESPACE === $id && T_NS_SEPARATOR !== $next[0] ) {
+			$ns = '';
+			$j  = $i + 1;
+			while ( isset( $tokens[ $j ] ) && in_array( $tokens[ $j ][0], $names, true ) ) {
+				$ns .= $tokens[ $j++ ][1];
+			}
+			$ns = '' === $ns ? '' : $ns . '\\';
+		} elseif ( T_FUNCTION === $id ) {
+			// Match the text: PHP 8.1+ gives "&" its own token types.
+			$name = '&' === $next[1] && isset( $tokens[ $i + 2 ] ) ? $tokens[ $i + 2 ] : $next;
+			if ( T_STRING === $name[0] ) {
+				$found[ 'function:' . strtolower( $ns . $name[1] ) ] = 'function ' . $ns . $name[1] . '()';
+			}
+		} elseif ( in_array( $id, $kinds, true ) && T_STRING === $next[0] && T_DOUBLE_COLON !== $prev && T_NEW !== $prev ) {
+			$found[ 'class:' . strtolower( $ns . $next[1] ) ] = $tokens[ $i ][1] . ' ' . $ns . $next[1];
+		}
+	}
+	return $found;
+}
+
+/**
+ * Whether the snippet declares a function or class that already exists, in
+ * the code that is loaded or in any active snippet (an active front-end
+ * snippet does not run on admin screens, so function_exists() alone would
+ * miss it). Declaring it again is a fatal error that try/catch cannot stop.
+ *
+ * @param string $code Snippet code that parses.
+ * @return string Error message, or '' when nothing is declared twice.
+ */
+function slim_snippets_redeclared( $code ) {
+	$taken = array();
+	foreach ( (array) get_option( 'slim_snippets_active', array() ) as list( , $scope, $other ) ) {
+		if ( slim_snippets_is_php( $scope ) ) {
+			$taken += slim_snippets_declarations( $other );
+		}
+	}
+	foreach ( slim_snippets_declarations( $code ) as $key => $label ) {
+		list( $kind, $name ) = explode( ':', $key, 2 );
+		$exists              = 'function' === $kind ? function_exists( $name ) : ( class_exists( $name ) || interface_exists( $name ) || trait_exists( $name ) );
+		if ( $exists || isset( $taken[ $key ] ) ) {
+			/* translators: %s: for example "function my_helper()" or "class My_Class" */
+			return sprintf( __( 'Cannot redeclare %s: it already exists in another snippet, a plugin or the theme', 'slim-snippets' ), $label );
+		}
+	}
+	return '';
+}
+
+/**
  * Activate a snippet, but only if it parses and runs without an error.
  * A single-use snippet runs once here and stays inactive.
  *
- * If the code dies with an uncatchable fatal error (for example "Cannot
- * redeclare"), the request ends here: the snippet is still inactive, its code
+ * A function or class declared twice is caught before the test run. If the
+ * code still dies with an uncatchable fatal error, the request ends here: the snippet is still inactive, its code
  * is already saved, and the leftover slim_snippets_testing option is reported
  * on the next visit to a snippets screen.
  *
@@ -329,6 +415,7 @@ function slim_snippets_activate( $id ) {
 	$scope = slim_snippets_scope( $id );
 	if ( slim_snippets_is_php( $scope ) ) {
 		$message = slim_snippets_lint( $post->post_content );
+		$message = $message ? $message : slim_snippets_redeclared( $post->post_content );
 		$output  = '';
 		if ( ! $message ) {
 			static $shutdown = false;

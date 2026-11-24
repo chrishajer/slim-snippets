@@ -771,22 +771,24 @@ function slim_snippets_html_to_text( $html ) {
 }
 
 /**
- * Import one snippet from Slim Snippets or Code Snippets export data.
- * Imported snippets are always inactive, whatever the export says, so nothing
- * runs until someone activates it on purpose.
+ * Import one snippet from Slim Snippets or Code Snippets export data, as an
+ * inactive snippet (or into the Trash). Activating is up to the caller.
  *
  * @param array $snippet            One entry of the export's "snippets" array.
  * @param bool  $from_code_snippets Whether the file came from Code Snippets, whose descriptions are HTML.
- * @return array{0: string, 1: string} State ('imported', 'skipped' or 'error') and a reason.
+ * @param bool  $keep_trash         Import snippets that are trashed in the export into the Trash instead of skipping them.
+ * @return array{0: string, 1: string, 2: int} State ('imported', 'trash', 'skipped' or 'error'), a note, and the new ID.
  */
-function slim_snippets_import_snippet( $snippet, $from_code_snippets = false ) {
+function slim_snippets_import_snippet( $snippet, $from_code_snippets = false, $keep_trash = false ) {
 	$scope = isset( $snippet['scope'] ) ? (string) $snippet['scope'] : 'global';
-	if ( ! empty( $snippet['trashed'] ) ) {
-		return array( 'skipped', __( 'trashed snippet', 'slim-snippets' ) );
+	$name  = sanitize_text_field( isset( $snippet['name'] ) ? $snippet['name'] : '' );
+	if ( ! empty( $snippet['trashed'] ) && ! $keep_trash ) {
+		/* translators: %s: snippet name */
+		return array( 'skipped', sprintf( __( '"%s": in the Trash in the export', 'slim-snippets' ), $name ), 0 );
 	}
 	if ( ! array_key_exists( $scope, slim_snippets_scopes() ) ) {
-		/* translators: %s: scope name from the export file */
-		return array( 'skipped', sprintf( __( 'unsupported scope "%s"', 'slim-snippets' ), $scope ) );
+		/* translators: 1: snippet name, 2: scope name from the export file */
+		return array( 'skipped', sprintf( __( '"%1$s": unsupported scope "%2$s"', 'slim-snippets' ), $name, $scope ), 0 );
 	}
 
 	$desc = isset( $snippet['desc'] ) ? $snippet['desc'] : ( isset( $snippet['description'] ) ? $snippet['description'] : '' );
@@ -796,7 +798,7 @@ function slim_snippets_import_snippet( $snippet, $from_code_snippets = false ) {
 			array(
 				'post_type'    => 'slim_snippet',
 				'post_status'  => 'draft',
-				'post_title'   => sanitize_text_field( isset( $snippet['name'] ) ? $snippet['name'] : '' ),
+				'post_title'   => $name,
 				'post_excerpt' => (string) $desc,
 				'post_content' => isset( $snippet['code'] ) ? (string) $snippet['code'] : '',
 				'menu_order'   => max( 0, isset( $snippet['priority'] ) ? (int) $snippet['priority'] : 10 ),
@@ -806,14 +808,74 @@ function slim_snippets_import_snippet( $snippet, $from_code_snippets = false ) {
 		true
 	);
 	if ( is_wp_error( $id ) ) {
-		return array( 'error', $id->get_error_message() );
+		return array( 'error', '"' . $name . '": ' . $id->get_error_message(), 0 );
 	}
 
 	$tags = isset( $snippet['tags'] ) ? $snippet['tags'] : array();
 	$tags = is_array( $tags ) ? $tags : explode( ',', (string) $tags );
 	wp_set_post_terms( $id, array_filter( array_map( 'sanitize_text_field', $tags ) ), 'slim_snippet_tag' );
 
-	return array( 'imported', '' );
+	if ( ! empty( $snippet['trashed'] ) ) {
+		wp_trash_post( $id );
+		return array( 'trash', '', $id );
+	}
+	return array( 'imported', '', $id );
+}
+
+/**
+ * Import the snippets of decoded export files and set their status.
+ *
+ * @param array  $files  Decoded export files.
+ * @param string $status 'inactive' (every snippet inactive), 'keep' (the
+ *                       status in the file, including the Trash) or 'active'
+ *                       (activate every snippet).
+ * @return array{0: array<string, int>, 1: string[]} Counts and notes.
+ */
+function slim_snippets_import_files( $files, $status ) {
+	$counts = array_fill_keys( array( 'active', 'inactive', 'trash', 'skipped' ), 0 );
+	$notes  = array();
+	$queue  = array();
+	foreach ( $files as $data ) {
+		if ( ! isset( $data['snippets'] ) || ! is_array( $data['snippets'] ) ) {
+			++$counts['skipped'];
+			$notes[] = __( 'A file is not a snippets export.', 'slim-snippets' );
+			continue;
+		}
+		$from_cs = isset( $data['generator'] ) && 0 === strpos( (string) $data['generator'], 'Code Snippets' );
+		foreach ( $data['snippets'] as $snippet ) {
+			if ( ! is_array( $snippet ) ) {
+				++$counts['skipped'];
+				$notes[] = __( 'A snippet in a file is not valid.', 'slim-snippets' );
+				continue;
+			}
+			list( $state, $note, $id ) = slim_snippets_import_snippet( $snippet, $from_cs, 'keep' === $status );
+			if ( 'imported' !== $state ) {
+				++$counts[ 'trash' === $state ? 'trash' : 'skipped' ];
+				$notes[] = $note;
+				continue;
+			}
+			// An import never runs a run-once snippet.
+			$activate = 'active' === $status || ( 'keep' === $status && ! empty( $snippet['active'] ) );
+			if ( $activate && 'single-use' !== slim_snippets_scope( $id ) ) {
+				$queue[] = $id;
+			} else {
+				++$counts['inactive'];
+			}
+		}
+	}
+
+	// Activate only once everything is imported, so a failure cannot cut the import short.
+	foreach ( $queue as $id ) {
+		list( $state, $text ) = slim_snippets_activate( $id );
+		if ( 'ok' === $state ) {
+			++$counts['active'];
+		} else {
+			++$counts['inactive'];
+			/* translators: 1: snippet name, 2: error message */
+			$notes[] = sprintf( __( '"%1$s" left inactive: %2$s', 'slim-snippets' ), get_the_title( $id ), $text );
+		}
+	}
+	return array( $counts, array_filter( $notes ) );
 }
 
 add_action(
@@ -840,13 +902,20 @@ function slim_snippets_import_page() {
 		<h1><?php esc_html_e( 'Import / Export Snippets', 'slim-snippets' ); ?></h1>
 
 		<h2><?php esc_html_e( 'Import', 'slim-snippets' ); ?></h2>
-		<p><?php esc_html_e( 'Upload JSON files exported from Slim Snippets or Code Snippets. Every snippet is imported inactive, even if it was active in the export, so nothing runs until you activate it.', 'slim-snippets' ); ?></p>
-		<p><?php esc_html_e( 'Moving from Code Snippets? Deactivate it before you activate the imported snippets. If it still runs the same snippets, a function declared twice stops the activation with a fatal error.', 'slim-snippets' ); ?></p>
+		<p><?php esc_html_e( 'Upload one or more JSON files exported from Slim Snippets or Code Snippets.', 'slim-snippets' ); ?></p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
 			<input type="hidden" name="action" value="slim_snippets_import">
 			<?php wp_nonce_field( 'slim_snippets_import' ); ?>
 			<p><input type="file" name="slim_snippets_files[]" accept=".json,application/json" multiple required></p>
-			<?php submit_button( __( 'Import', 'slim-snippets' ), 'primary', 'submit', false ); ?>
+			<fieldset>
+				<legend><strong><?php esc_html_e( 'Status after import', 'slim-snippets' ); ?></strong></legend>
+				<p><label><input type="radio" name="slim_snippets_status" value="inactive" checked> <?php esc_html_e( 'Inactive: import every snippet inactive, so nothing runs until you activate it', 'slim-snippets' ); ?></label></p>
+				<p><label><input type="radio" name="slim_snippets_status" value="keep"> <?php esc_html_e( 'Keep the status from the file: activate the active snippets, keep the inactive ones inactive, and put trashed snippets in the Trash', 'slim-snippets' ); ?></label></p>
+				<p><label><input type="radio" name="slim_snippets_status" value="active"> <?php esc_html_e( 'Active: activate every snippet', 'slim-snippets' ); ?></label></p>
+			</fieldset>
+			<p class="description"><?php esc_html_e( 'Activating runs the usual checks. A snippet with an error, or one that declares a function or class that already exists, stays inactive and is listed in the notice. Run-once snippets are always imported inactive, so an import never runs them. Trashed snippets are skipped unless you keep the status from the file.', 'slim-snippets' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Moving from Code Snippets? Deactivate it first. While it still runs the same snippets, their functions already exist, so activating the copies fails.', 'slim-snippets' ); ?></p>
+			<?php submit_button( __( 'Import', 'slim-snippets' ) ); ?>
 		</form>
 
 		<h2><?php esc_html_e( 'Export', 'slim-snippets' ); ?></h2>
@@ -864,44 +933,30 @@ add_action(
 			wp_die( esc_html__( 'Sorry, you are not allowed to manage snippets.', 'slim-snippets' ), 403 );
 		}
 
-		$counts  = array(
-			'imported' => 0,
-			'skipped'  => 0,
-			'error'    => 0,
-		);
-		$reasons = array();
+		$status = isset( $_POST['slim_snippets_status'] ) ? sanitize_key( wp_unslash( $_POST['slim_snippets_status'] ) ) : '';
+		$status = in_array( $status, array( 'keep', 'active' ), true ) ? $status : 'inactive';
+		$files  = array();
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Only tmp_name is used, checked with is_uploaded_file().
-		$files = isset( $_FILES['slim_snippets_files']['tmp_name'] ) ? (array) $_FILES['slim_snippets_files']['tmp_name'] : array();
-
-		foreach ( $files as $tmp ) {
-			if ( ! is_uploaded_file( $tmp ) ) {
-				continue;
-			}
-			$data = json_decode( (string) file_get_contents( $tmp ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local uploaded file.
-			if ( ! isset( $data['snippets'] ) || ! is_array( $data['snippets'] ) ) {
-				++$counts['error'];
-				$reasons[] = __( 'a file is not a snippets export', 'slim-snippets' );
-				continue;
-			}
-			$from_cs = isset( $data['generator'] ) && 0 === strpos( (string) $data['generator'], 'Code Snippets' );
-			foreach ( $data['snippets'] as $snippet ) {
-				list( $state, $reason ) = is_array( $snippet ) ? slim_snippets_import_snippet( $snippet, $from_cs ) : array( 'error', 'bad entry' );
-				++$counts[ $state ];
-				if ( $reason ) {
-					$reasons[] = $reason;
-				}
+		foreach ( isset( $_FILES['slim_snippets_files']['tmp_name'] ) ? (array) $_FILES['slim_snippets_files']['tmp_name'] : array() as $tmp ) {
+			if ( is_uploaded_file( $tmp ) ) {
+				$files[] = json_decode( (string) file_get_contents( $tmp ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local uploaded file.
 			}
 		}
 
+		list( $counts, $notes ) = slim_snippets_import_files( $files, $status );
+		$total                  = $counts['active'] + $counts['inactive'] + $counts['trash'];
 		slim_snippets_notice(
-			$counts['error'] ? 'warning' : 'success',
+			$notes ? 'warning' : 'success',
 			sprintf(
-				/* translators: 1: imported count, 2: skipped count */
-				_n( 'Imported %1$d snippet (inactive). Skipped %2$d.', 'Imported %1$d snippets (all inactive). Skipped %2$d.', $counts['imported'], 'slim-snippets' ),
-				$counts['imported'],
-				$counts['skipped'] + $counts['error']
+				/* translators: 1: imported count, 2: active, 3: inactive, 4: in the Trash, 5: skipped */
+				_n( 'Imported %1$d snippet: %2$d active, %3$d inactive, %4$d in the Trash. Skipped %5$d.', 'Imported %1$d snippets: %2$d active, %3$d inactive, %4$d in the Trash. Skipped %5$d.', $total, 'slim-snippets' ),
+				$total,
+				$counts['active'],
+				$counts['inactive'],
+				$counts['trash'],
+				$counts['skipped']
 			),
-			$reasons ? __( 'Skipped or failed:', 'slim-snippets' ) . ' ' . implode( ', ', array_unique( $reasons ) ) : ''
+			implode( "\n", $notes )
 		);
 		wp_safe_redirect( admin_url( 'edit.php?post_type=slim_snippet' ) );
 		exit;

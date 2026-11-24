@@ -5,11 +5,11 @@ A small WordPress plugin for running PHP, CSS and JavaScript snippets without ed
 - PHP snippets: run everywhere, admin only, front-end only, or once
 - CSS and JS snippets: front-end head or footer, or the admin head
 - WordPress's built-in CodeMirror editor
-- PHP is syntax-checked and test-run before activation, so a snippet with errors stays inactive
+- PHP is syntax-checked, checked for functions and classes that already exist, and test-run before activation, so a snippet with errors stays inactive
 - Active snippets live in one autoloaded option, so running them adds no queries
 - Priority, tags, description, revisions
 - All / Active / Inactive / Recently Active / Trash views; sort by name, created, modified, ID or priority; search across code, description and tags
-- JSON import and export, compatible with Code Snippets in both directions; imported snippets are always inactive
+- JSON import and export, compatible with Code Snippets in both directions; import inactive (the default), keep the file's status, or activate everything
 - Safe mode: `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` or `?slim-snippets-safe-mode=1`
 
 ## Install

@@ -17,7 +17,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **PHP snippets** that run everywhere, only in the admin, only on the front end, or once.
 * **CSS and JavaScript snippets** printed in the front-end head or footer, or in the admin head.
 * **Syntax-highlighting editor** (the CodeMirror editor built into WordPress). The mode follows the snippet's scope.
-* **No activation with errors.** PHP is syntax-checked and test-run before it is activated. If it throws an error, or dies with a fatal error, it stays inactive and the error is shown. If an active snippet throws an error on a later page load, it deactivates itself and records the error.
+* **No activation with errors.** PHP is syntax-checked and test-run before it is activated. If it throws an error, dies with a fatal error, or declares a function or class that already exists, it stays inactive and the error is shown. If an active snippet throws an error on a later page load, it deactivates itself and records the error.
 * **Fast.** Active snippets are stored in one autoloaded option, so running them adds no database queries.
 * **Priority.** Lower numbers run first.
 * **Title, code, description and tags** for each snippet.
@@ -25,7 +25,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **Sorting** by name, created date, modified date, ID or priority, ascending or descending.
 * **Search** across the name, code, description and tags.
 * **Revisions** of the code, title and description.
-* **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction. Imported snippets are always inactive until you activate them.
+* **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction. Import several files at once, and choose whether the snippets arrive inactive (the default), keep the status from the file, or are all activated.
 * **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in wp-config.php, or add `?slim-snippets-safe-mode=1` to an admin URL while logged in.
 
 Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
@@ -43,11 +43,11 @@ Only administrators can manage snippets. On multisite, only super admins can, be
 = How do I move my snippets from Code Snippets? =
 
 1. In Code Snippets, select the snippets you want to keep and choose the Export bulk action.
-2. In Slim Snippets, go to Snippets > Import / Export and upload the file.
-3. Deactivate Code Snippets. If it keeps running the same snippets, any function they declare would be declared twice and stop the activation with a fatal error.
-4. Activate the imported snippets you want, one at a time or with the Activate bulk action.
+2. Deactivate Code Snippets. While it runs the same snippets, their functions already exist, so activating the copies fails.
+3. In Slim Snippets, go to Snippets > Import / Export, upload the file, and choose the status after import.
+4. If you imported them inactive, activate the snippets you want, one at a time or with the Activate bulk action.
 
-Every snippet is imported inactive, even if it was active in the export, so nothing runs until you activate it. Activating runs the usual checks. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and counted in the notice.
+By default every snippet is imported inactive, so nothing runs until you activate it. You can instead keep the status from the file (trashed snippets go to the Trash) or activate every snippet. Activating runs the usual checks: a snippet that fails them stays inactive and is named in the notice. Run-once snippets are always imported inactive, so an import never runs them. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and named in the notice.
 
 Code Snippets stores descriptions as HTML. On import they become plain text: paragraphs and line breaks are kept, list items become "- " lines, and links keep their URL in parentheses. The conversion is one way: if you export snippets back to Code Snippets, their descriptions stay plain text.
 
@@ -87,6 +87,9 @@ Thank you to the Code Snippets authors.
 == Changelog ==
 
 = 1.0.4 =
+* Import options: import every snippet inactive (the default), keep the status from the file (including the Trash), or activate every snippet. Run-once snippets are never run by an import.
+* Activation stops a snippet that declares a function or class that already exists, also in an active snippet that does not run on the current screen, instead of ending in a fatal error.
+* Import notices name each skipped snippet and each snippet that could not be activated.
 * The Snippets menu lists Import / Export before Tags.
 
 = 1.0.3 =
