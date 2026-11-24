@@ -825,7 +825,8 @@ add_action(
 			__( 'Import / Export', 'slim-snippets' ),
 			slim_snippets_cap(),
 			'slim-snippets-import',
-			'slim_snippets_import_page'
+			'slim_snippets_import_page',
+			2 // After All Snippets and Add Snippet, before Tags.
 		);
 	}
 );
