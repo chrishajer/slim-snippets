@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,6 +85,10 @@ Slim Snippets is an independent plugin, but it owes several ideas to [Code Snipp
 Thank you to the Code Snippets authors.
 
 == Changelog ==
+
+= 1.0.3 =
+* The Snippet box (scope, priority and the Save buttons) can no longer be hidden in Screen Options.
+* Removed the Slug box from the snippet screen. Snippets have no URL.
 
 = 1.0.2 =
 * Code Snippets descriptions are converted from HTML to plain text on import. Paragraphs, lists and preformatted text keep their layout, and link URLs are kept in parentheses.
