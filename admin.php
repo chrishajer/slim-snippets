@@ -590,7 +590,9 @@ add_filter(
 			WHERE tt.taxonomy = 'slim_snippet_tag' AND t.name LIKE %s)",
 			'%' . $wpdb->esc_like( $query->get( 's' ) ) . '%'
 		);
-		return preg_replace( '/^\s*AND\s*\(/', ' AND ( ' . $tags . ' OR (', $search, 1 ) . ')';
+		// Concatenate rather than use $tags as a preg_replace() replacement, where
+		// "$0" or "\\" in the search term would be read as references.
+		return ' AND ( ' . $tags . ' OR (' . preg_replace( '/^\s*AND\s*\(/', '', $search, 1 ) . ')';
 	},
 	10,
 	2
