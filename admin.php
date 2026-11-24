@@ -1157,7 +1157,9 @@ function slim_snippets_cs_section() {
 					<td><?php echo esc_html( $labels[ $item['status'] ] ); ?></td>
 					<td>
 						<?php
-						if ( 'skip' === $item['result'] ) {
+						if ( 'trash' === $item['status'] ) {
+							esc_html_e( 'Not migrated', 'slim-snippets' ); // The status column already says Trash.
+						} elseif ( 'skip' === $item['result'] ) {
 							/* translators: %s: reason, for example "already in Slim Snippets" */
 							echo esc_html( sprintf( __( 'Not migrated: %s', 'slim-snippets' ), $item['note'] ) );
 						} else {
