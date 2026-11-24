@@ -1,7 +1,8 @@
 <?php
 /**
  * Self-check for Slim Snippets. Creates snippets, checks the activation gate,
- * the runner index and import/export, then deletes everything it made.
+ * the runner index and import/export, then deletes everything it made (on
+ * shutdown, so a fatal error mid-run still cleans up).
  *
  * Run on a test site with the plugin active:
  *   wp eval-file tests/check.php --user=<admin>
@@ -16,6 +17,23 @@ require_once dirname( SLIM_SNIPPETS_FILE ) . '/admin.php';
 
 $slim_made = array();
 $slim_fail = 0;
+
+// Delete everything this script made, even if a check dies with a fatal error.
+register_shutdown_function(
+	function () use ( &$slim_made ) {
+		foreach ( $slim_made as $id ) {
+			wp_delete_post( $id, true );
+		}
+		delete_transient( 'slim_snippets_notices_' . get_current_user_id() );
+		slim_snippets_rebuild();
+		foreach ( array( 'alpha', 'beta', 'One', 'Two' ) as $name ) {
+			$term = get_term_by( 'name', $name, 'slim_snippet_tag' );
+			if ( $term && 0 === (int) $term->count ) {
+				wp_delete_term( $term->term_id, 'slim_snippet_tag' );
+			}
+		}
+	}
+);
 
 $check = function ( $ok, $label ) use ( &$slim_fail ) {
 	echo ( $ok ? 'PASS ' : 'FAIL ' ) . $label . "\n";
@@ -92,10 +110,16 @@ slim_snippets_activate( $late );
 $ids   = wp_list_pluck( (array) get_option( 'slim_snippets_active' ), 0 );
 $check( 'ok' === $state && array_search( $css, $ids, true ) < array_search( $good, $ids, true ) && array_search( $good, $ids, true ) < array_search( $late, $ids, true ), 'CSS activates; index sorted by priority' );
 
-// 8. Runner deactivates a snippet that throws at load time.
-$bad = $make( "throw new LogicException( 'late boom' );" );
+// 8. Runner deactivates a snippet that throws at load time. Only this snippet
+// runs: the site's own active snippets already ran when WordPress loaded.
+$bad      = $make( "throw new LogicException( 'late boom' );" );
+$only_bad = function () use ( $bad ) {
+	return array( array( $bad, 'global', "throw new LogicException( 'late boom' );" ) );
+};
 slim_snippets_set_status( $bad, 'publish' );
+add_filter( 'pre_option_slim_snippets_active', $only_bad );
 slim_snippets_run();
+remove_filter( 'pre_option_slim_snippets_active', $only_bad );
 $check( 'draft' === get_post_status( $bad ) && false !== strpos( get_post_meta( $bad, '_slim_snippets_error', true ), 'late boom' ), 'runner deactivates throwing snippet' );
 
 // 9. Export then import round-trips every field; an active snippet comes back inactive.
@@ -220,17 +244,16 @@ $emoji_id = $make( '// emoji', 'global', array( 'post_excerpt' => "Party \u{1F38
 remove_filter( 'pre_get_col_charset', $utf8, 10 );
 $check( 'Party &#x1f389;' === get_post_field( 'post_excerpt', $emoji_id ), 'utf8mb3 description stores emoji as entities: ' . wp_json_encode( get_post_field( 'post_excerpt', $emoji_id ) ) );
 
-// Clean up.
-foreach ( $slim_made as $id ) {
-	wp_delete_post( $id, true );
-}
-delete_transient( 'slim_snippets_notices_' . get_current_user_id() );
-slim_snippets_rebuild();
-foreach ( array( 'alpha', 'beta', 'One', 'Two' ) as $name ) {
-	$term = get_term_by( 'name', $name, 'slim_snippet_tag' );
-	if ( $term && 0 === (int) $term->count ) {
-		wp_delete_term( $term->term_id, 'slim_snippet_tag' );
-	}
-}
+// 17. The Snippet box takes the Publish box's place (Screen Options cannot hide it), and there is no Slug box.
+require_once ABSPATH . 'wp-admin/includes/admin.php';
+require_once ABSPATH . 'wp-admin/includes/meta-boxes.php';
+set_current_screen( 'slim_snippet' );
+register_and_do_post_meta_boxes( get_post( $edit_id ) );
+$boxes = $GLOBALS['wp_meta_boxes']['slim_snippet'];
+$check(
+	isset( $boxes['side']['high']['submitdiv']['callback'] ) && 'slim_snippets_box' === $boxes['side']['high']['submitdiv']['callback']
+	&& ! isset( $boxes['side']['core']['submitdiv'] ) && empty( $boxes['normal']['core']['slugdiv'] ),
+	'Snippet box replaces the Publish box; no Slug box'
+);
 
 echo $slim_fail ? "\n$slim_fail FAILED\n" : "\nALL PASSED\n";

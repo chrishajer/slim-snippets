@@ -127,8 +127,12 @@ function slim_snippets_admin_notices() {
 add_action(
 	'add_meta_boxes_slim_snippet',
 	function () {
-		remove_meta_box( 'submitdiv', 'slim_snippet', 'side' );
-		add_meta_box( 'slim_snippets_box', __( 'Snippet', 'slim-snippets' ), 'slim_snippets_box', 'slim_snippet', 'side', 'high' );
+		// Reuse the Publish box's ID: Screen Options never lists it, so the
+		// Save buttons cannot be hidden. A new priority replaces the core box
+		// (the same 'core' priority would keep it). Snippets have no URL, so no
+		// Slug box.
+		add_meta_box( 'submitdiv', __( 'Snippet', 'slim-snippets' ), 'slim_snippets_box', 'slim_snippet', 'side', 'high' );
+		remove_meta_box( 'slugdiv', 'slim_snippet', 'normal' );
 	}
 );
 
