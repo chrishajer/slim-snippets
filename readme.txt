@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.8
+Stable tag: 1.0.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,6 +26,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **Search** across the name, code, description and tags.
 * **Revisions** of the code, title and description.
 * **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction. Import several files at once, and choose whether the snippets arrive inactive (the default), keep the status from the file, or are all activated.
+* **Migrate from Code Snippets** on the same site in one step: review what will be copied, then Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
 * **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in wp-config.php, or add `?slim-snippets-safe-mode=1` to an admin URL while logged in.
 
 Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
@@ -41,6 +42,16 @@ Only administrators can manage snippets. On multisite, only super admins can, be
 == Frequently Asked Questions ==
 
 = How do I move my snippets from Code Snippets? =
+
+If Code Snippets is active on the same site, migrate them in one step:
+
+1. Go to Snippets > Import / Export. While Code Snippets is active, Migrate from Code Snippets is the first section.
+2. Review the list. It shows each Code Snippets snippet, its status in Code Snippets, and whether it will be migrated.
+3. Click the Migrate button. Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets.
+
+Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), snippets that use a Code Snippets condition, and snippets already in Slim Snippets are not migrated. The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it. If Code Snippets is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
+
+To move snippets from Code Snippets on another site, export them there and import the file:
 
 1. In Code Snippets, select the snippets you want to keep and choose the Export bulk action.
 2. Deactivate Code Snippets. While it runs the same snippets, their functions already exist, so activating the copies fails.
@@ -85,6 +96,9 @@ Slim Snippets is an independent plugin, but it owes several ideas to [Code Snipp
 Thank you to the Code Snippets authors.
 
 == Changelog ==
+
+= 1.0.9 =
+* Migrate from Code Snippets on the same site in one step. While Code Snippets is active, the Import / Export page lists each of its snippets and what migrating will do with it. Migrating copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets. A notice on the Snippets screens and the Plugins screen links to it.
 
 = 1.0.8 =
 * The Export section of the Import / Export page lists each way to export: one snippet, several snippets, or every snippet that is not in the Trash.
