@@ -26,8 +26,8 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **Search** across the name, code, description and tags.
 * **Revisions** of the code, title and description.
 * **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction. Import several files at once, and choose whether the snippets arrive inactive (the default), keep the status from the file, or are all activated.
-* **Migrate from Code Snippets** on the same site in one step: review what will be copied, then Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
-* **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in wp-config.php, or add `?slim-snippets-safe-mode=1` to an admin URL while logged in.
+* **Migrate from Code Snippets** on the same site with one click: review what will be copied, then Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
+* **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in wp-config.php, or stop them for your own requests only by adding `?slim-snippets-safe-mode=1` to any URL while logged in.
 
 Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
 
@@ -43,20 +43,21 @@ Only administrators can manage snippets. On multisite, only super admins can, be
 
 = How do I move my snippets from Code Snippets? =
 
-If Code Snippets is active on the same site, migrate them in one step:
+If Code Snippets is active on the same site, Slim Snippets can migrate them for you:
 
 1. Go to Snippets > Import / Export. While Code Snippets is active, Migrate from Code Snippets is the first section.
 2. Review the list. It shows each Code Snippets snippet, its status in Code Snippets, and whether it will be migrated.
 3. Click the Migrate button. Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets.
 
-Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), snippets that use a Code Snippets condition, and snippets already in Slim Snippets are not migrated. The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it. If Code Snippets is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
+Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), and snippets that use a Code Snippets condition are not migrated. A snippet that is already in Slim Snippets (same name and code) is not copied again; if that copy is inactive and the snippet is active in Code Snippets, the copy is activated. Run-once snippets are copied inactive. A copy with a syntax error, or one that declares a function or class that already exists, stays inactive and is named in the notice. The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it. If Code Snippets is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
 
 To move snippets from Code Snippets on another site, export them there and import the file:
 
-1. In Code Snippets, select the snippets you want to keep and choose the Export bulk action.
-2. Deactivate Code Snippets. While it runs the same snippets, their functions already exist, so activating the copies fails.
-3. In Slim Snippets, go to Snippets > Import / Export, upload the file, and choose the status after import.
-4. If you imported them inactive, activate the snippets you want, one at a time or with the Activate bulk action.
+1. On the other site, in Code Snippets, select the snippets you want to keep and choose the Export bulk action.
+2. On this site, go to Snippets > Import / Export, upload the file, and choose the status after import.
+3. If you imported them inactive, activate the snippets you want, one at a time or with the Activate bulk action.
+
+If Code Snippets is also active on this site, use the migration above instead. While it is active, the functions in your snippets are already defined, so imported copies cannot be activated.
 
 By default every snippet is imported inactive, so nothing runs until you activate it. You can instead keep the status from the file (trashed snippets go to the Trash) or activate every snippet. Activating runs the usual checks: a snippet that fails them stays inactive and is named in the notice. Run-once snippets are always imported inactive, so an import never runs them. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and named in the notice.
 
