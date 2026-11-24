@@ -7,6 +7,17 @@
 
 defined( 'ABSPATH' ) || exit;
 
+// A "Snippets" link before Deactivate on the Plugins screen.
+add_filter(
+	'plugin_action_links_' . plugin_basename( SLIM_SNIPPETS_FILE ),
+	function ( $links ) {
+		if ( current_user_can( slim_snippets_cap() ) ) {
+			array_unshift( $links, sprintf( '<a href="%s">%s</a>', esc_url( admin_url( 'edit.php?post_type=slim_snippet' ) ), esc_html__( 'Snippets', 'slim-snippets' ) ) );
+		}
+		return $links;
+	}
+);
+
 /**
  * Scope names and labels. The names match Code Snippets, so imports map 1:1.
  *
@@ -426,7 +437,40 @@ add_action(
 		$wp_post_statuses['publish']->label_count = _n_noop( 'Active <span class="count">(%s)</span>', 'Active <span class="count">(%s)</span>', 'slim-snippets' );
 		/* translators: %s: number of snippets */
 		$wp_post_statuses['draft']->label_count = _n_noop( 'Inactive <span class="count">(%s)</span>', 'Inactive <span class="count">(%s)</span>', 'slim-snippets' );
+
+		// Grey "No description" in Extended view (core prints the excerpt as bare text, so style the cell).
+		wp_add_inline_style( 'wp-admin', '.table-view-excerpt .slim-snippets-no-desc .column-title{color:#646970;font-style:italic}.table-view-excerpt .slim-snippets-no-desc .column-title strong{color:#50575e}.table-view-excerpt .slim-snippets-no-desc .column-title :is(strong,.row-actions){font-style:normal}' );
 	}
+);
+
+// Extended view shows the Description under the title. Without one, core would
+// build an excerpt from the code (texturized, so quotes turn curly); show a
+// placeholder instead, and nothing in Compact view.
+add_filter(
+	'get_the_excerpt',
+	function ( $excerpt, $post ) {
+		if ( 'slim_snippet' !== $post->post_type ) {
+			return $excerpt;
+		}
+		if ( '' !== trim( $post->post_excerpt ) ) {
+			return $post->post_excerpt;
+		}
+		return isset( $GLOBALS['mode'] ) && 'excerpt' === $GLOBALS['mode'] ? __( 'No description', 'slim-snippets' ) : '';
+	},
+	20,
+	2
+);
+
+add_filter(
+	'post_class',
+	function ( $classes, $css_class, $post_id ) {
+		if ( 'slim_snippet' === get_post_type( $post_id ) && '' === trim( get_post_field( 'post_excerpt', $post_id ) ) ) {
+			$classes[] = 'slim-snippets-no-desc';
+		}
+		return $classes;
+	},
+	10,
+	3
 );
 
 add_filter(
@@ -907,19 +951,30 @@ function slim_snippets_import_page() {
 		<h1><?php esc_html_e( 'Import / Export Snippets', 'slim-snippets' ); ?></h1>
 
 		<h2><?php esc_html_e( 'Import', 'slim-snippets' ); ?></h2>
-		<p><?php esc_html_e( 'Upload one or more JSON files exported from Slim Snippets or Code Snippets.', 'slim-snippets' ); ?></p>
+		<p><?php esc_html_e( 'Upload one or more JSON files exported from Slim Snippets or Code Snippets. Drop them on the box below or choose them.', 'slim-snippets' ); ?></p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
 			<input type="hidden" name="action" value="slim_snippets_import">
 			<?php wp_nonce_field( 'slim_snippets_import' ); ?>
-			<p><input type="file" name="slim_snippets_files[]" accept=".json,application/json" multiple required></p>
+			<style>
+				/* The whole input is the drop zone; the browse button looks like a WP .button. */
+				#slim-snippets-files{box-sizing:border-box;width:100%;max-width:600px;padding:48px 24px;border:2px dashed #c3c4c7;border-radius:4px;background:#fff;cursor:pointer}
+				#slim-snippets-files:hover,#slim-snippets-files:focus{border-color:#2271b1;outline:0}
+				#slim-snippets-files::file-selector-button{margin-right:10px;padding:0 10px;min-height:30px;font-size:13px;line-height:2.15384615;color:#2271b1;background:#f6f7f7;border:1px solid #2271b1;border-radius:3px;cursor:pointer}
+				#slim-snippets-files::file-selector-button:hover{color:#0a4b78;background:#f0f0f1;border-color:#0a4b78}
+			</style>
+			<p><input type="file" id="slim-snippets-files" name="slim_snippets_files[]" accept=".json,application/json" multiple required></p>
 			<fieldset>
 				<legend><strong><?php esc_html_e( 'Status after import', 'slim-snippets' ); ?></strong></legend>
 				<p><label><input type="radio" name="slim_snippets_status" value="inactive" checked> <?php esc_html_e( 'Inactive: import every snippet inactive, so nothing runs until you activate it', 'slim-snippets' ); ?></label></p>
 				<p><label><input type="radio" name="slim_snippets_status" value="keep"> <?php esc_html_e( 'Keep the status from the file: activate the active snippets, keep the inactive ones inactive, and put trashed snippets in the Trash', 'slim-snippets' ); ?></label></p>
 				<p><label><input type="radio" name="slim_snippets_status" value="active"> <?php esc_html_e( 'Active: activate every snippet', 'slim-snippets' ); ?></label></p>
 			</fieldset>
-			<p class="description"><?php esc_html_e( 'Activating runs the usual checks. A snippet with an error, or one that declares a function or class that already exists, stays inactive and is listed in the notice. Run-once snippets are always imported inactive, so an import never runs them. Trashed snippets are skipped unless you keep the status from the file.', 'slim-snippets' ); ?></p>
-			<p class="description"><?php esc_html_e( 'Moving from Code Snippets? Deactivate it first. While it still runs the same snippets, their functions already exist, so activating the copies fails.', 'slim-snippets' ); ?></p>
+			<ul class="ul-disc">
+				<li><?php esc_html_e( 'Activating runs the usual checks. A snippet with an error, or one that declares a function or class that already exists, stays inactive and is listed in the notice.', 'slim-snippets' ); ?></li>
+				<li><?php esc_html_e( 'Run-once snippets are always imported inactive, so an import never runs them.', 'slim-snippets' ); ?></li>
+				<li><?php esc_html_e( 'Trashed snippets are not imported unless you keep the status from the file.', 'slim-snippets' ); ?></li>
+				<li><strong><?php esc_html_e( 'Migrating from Code Snippets?', 'slim-snippets' ); ?></strong> <?php esc_html_e( 'Deactivate it before you import. While Code Snippets is active, the functions in your snippets are already defined, so the imported copies cannot be activated.', 'slim-snippets' ); ?></li>
+			</ul>
 			<?php submit_button( __( 'Import', 'slim-snippets' ) ); ?>
 		</form>
 

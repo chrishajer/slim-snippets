@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.6
+Stable tag: 1.0.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,6 +85,12 @@ Slim Snippets is an independent plugin, but it owes several ideas to [Code Snipp
 Thank you to the Code Snippets authors.
 
 == Changelog ==
+
+= 1.0.7 =
+* A "Snippets" link on the Plugins screen, before Deactivate.
+* The Import / Export page has a larger drop zone for import files, and its browse button looks like the other WordPress buttons.
+* The import notes on the Import / Export page are a bulleted list, with clearer wording about trashed snippets and migrating from Code Snippets.
+* In the Extended view of the snippets list, a snippet without a description shows "No description" in grey italics instead of the start of its code.
 
 = 1.0.6 =
 * The Description box on the snippet screen is taller (7 rows).
