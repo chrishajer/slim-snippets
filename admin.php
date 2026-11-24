@@ -1052,19 +1052,24 @@ add_action(
  * What migrating from the active Code Snippets would do with each of its
  * snippets. Reads Code Snippets' own table and changes nothing.
  *
+ * @param array[]|null $rows Rows of Code Snippets' table; null reads the table.
  * @return array[] One row per Code Snippets snippet: 'snippet' (export-style
  *                 array), 'status' in Code Snippets ('active', 'inactive' or
- *                 'trash'), 'result' ('active', 'inactive' or 'skip') and
- *                 'note' (why it is skipped, or '').
+ *                 'trash'), 'result' ('active', 'inactive' or 'skip'), 'note'
+ *                 (why it is skipped, or '') and 'existing' (ID of the inactive
+ *                 Slim Snippets copy to activate instead of copying again, or 0).
  */
-function slim_snippets_cs_plan() {
+function slim_snippets_cs_plan( $rows = null ) {
 	global $wpdb;
-	if ( ! defined( 'CODE_SNIPPETS_FILE' ) ) {
-		return array();
+	if ( null === $rows ) {
+		if ( ! defined( 'CODE_SNIPPETS_FILE' ) ) {
+			return array();
+		}
+		$rows = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}snippets ORDER BY priority, id", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Code Snippets' own table, no input.
 	}
-	$rows = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}snippets ORDER BY priority, id", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Code Snippets' own table, no input.
 
-	// Snippets already copied (same name and code) are not copied again.
+	// Snippets already copied (same name and code) are not copied again. Values
+	// are a Slim Snippets post, or the index of an earlier row of this plan.
 	$have  = array();
 	$posts = get_posts(
 		array(
@@ -1074,16 +1079,20 @@ function slim_snippets_cs_plan() {
 		)
 	);
 	foreach ( $posts as $post ) {
-		$have[ $post->post_title . "\0" . trim( $post->post_content ) ] = true;
+		$have[ $post->post_title . "\0" . trim( $post->post_content ) ] = $post;
 	}
 	// A network-active Code Snippets is not deactivated here, so nothing may be activated.
-	$can_activate = ! is_plugin_active_for_network( plugin_basename( CODE_SNIPPETS_FILE ) );
+	$can_activate = ! defined( 'CODE_SNIPPETS_FILE' ) || ! is_plugin_active_for_network( plugin_basename( CODE_SNIPPETS_FILE ) );
 
 	$plan = array();
 	foreach ( (array) $rows as $row ) {
-		$name   = sanitize_text_field( $row['name'] );
-		$status = (int) $row['active'] < 0 ? 'trash' : ( (int) $row['active'] ? 'active' : 'inactive' );
-		$note   = '';
+		$name     = sanitize_text_field( $row['name'] );
+		$status   = (int) $row['active'] < 0 ? 'trash' : ( (int) $row['active'] ? 'active' : 'inactive' );
+		$active   = $can_activate && 'active' === $status && 'single-use' !== $row['scope'];
+		$key      = $name . "\0" . trim( $row['code'] );
+		$dup      = isset( $have[ $key ] ) ? $have[ $key ] : null;
+		$note     = '';
+		$existing = 0;
 		if ( 'trash' === $status ) {
 			$note = __( 'in the Code Snippets Trash', 'slim-snippets' );
 		} elseif ( ! array_key_exists( $row['scope'], slim_snippets_scopes() ) ) {
@@ -1091,11 +1100,21 @@ function slim_snippets_cs_plan() {
 			$note = sprintf( __( 'scope "%s" is not supported', 'slim-snippets' ), $row['scope'] );
 		} elseif ( ! empty( $row['condition_id'] ) ) {
 			$note = __( 'uses a Code Snippets condition, which is not supported', 'slim-snippets' );
-		} elseif ( isset( $have[ $name . "\0" . trim( $row['code'] ) ] ) ) {
+		} elseif ( is_int( $dup ) ) {
+			$note = __( 'same as another Code Snippets snippet', 'slim-snippets' );
+			if ( $active && 'single-use' !== $plan[ $dup ]['snippet']['scope'] ) {
+				$plan[ $dup ]['result'] = 'active';
+			}
+		} elseif ( $dup && $active && 'draft' === $dup->post_status ) {
+			$existing = $dup->ID; // Inactive copy, from an earlier import: activate it, or this snippet runs nowhere.
+		} elseif ( $dup ) {
 			$note = __( 'already in Slim Snippets', 'slim-snippets' );
 		}
+		if ( ! $note ) {
+			$have[ $key ] = count( $plan );
+		}
 		$plan[] = array(
-			'snippet' => array(
+			'snippet'  => array(
 				'name'     => $name,
 				'desc'     => $row['description'],
 				'code'     => $row['code'],
@@ -1103,12 +1122,50 @@ function slim_snippets_cs_plan() {
 				'scope'    => $row['scope'],
 				'priority' => $row['priority'],
 			),
-			'status'  => $status,
-			'result'  => $note ? 'skip' : ( $can_activate && 'active' === $status && 'single-use' !== $row['scope'] ? 'active' : 'inactive' ),
-			'note'    => $note,
+			'status'   => $status,
+			'result'   => $note ? 'skip' : ( $active ? 'active' : 'inactive' ),
+			'note'     => $note,
+			'existing' => $existing,
 		);
 	}
 	return $plan;
+}
+
+/**
+ * Why each Code Snippets copy cannot be activated, without running it. The
+ * copies skip the test run and function_exists(): Code Snippets already ran
+ * the same code in this request, so those would always fail. What is checked
+ * is that the code parses and declares nothing that an active Slim Snippets
+ * snippet, or an earlier copy in the list, already declares.
+ *
+ * @param int[] $ids Snippet IDs, in activation order.
+ * @return array<int, string> ID => error, '' when it can be activated.
+ */
+function slim_snippets_cs_check( $ids ) {
+	$taken = array();
+	foreach ( (array) get_option( 'slim_snippets_active', array() ) as list( , $scope, $code ) ) {
+		if ( slim_snippets_is_php( $scope ) ) {
+			$taken += slim_snippets_declarations( $code );
+		}
+	}
+	$errors = array();
+	foreach ( $ids as $id ) {
+		$error = '';
+		if ( slim_snippets_is_php( slim_snippets_scope( $id ) ) ) {
+			$code  = get_post_field( 'post_content', $id );
+			$error = slim_snippets_lint( $code );
+			$found = $error ? array() : slim_snippets_declarations( $code );
+			$clash = array_intersect_key( $found, $taken );
+			if ( $clash ) {
+				/* translators: %s: for example "function my_helper()" or "class My_Class" */
+				$error = sprintf( __( 'Cannot redeclare %s: it already exists in another snippet, a plugin or the theme', 'slim-snippets' ), reset( $clash ) );
+			} else {
+				$taken += $found;
+			}
+		}
+		$errors[ $id ] = $error;
+	}
+	return $errors;
 }
 
 /**
@@ -1162,6 +1219,8 @@ function slim_snippets_cs_section() {
 						} elseif ( 'skip' === $item['result'] ) {
 							/* translators: %s: reason, for example "already in Slim Snippets" */
 							echo esc_html( sprintf( __( 'Not migrated: %s', 'slim-snippets' ), $item['note'] ) );
+						} elseif ( $item['existing'] ) {
+							esc_html_e( 'Active (the inactive copy already in Slim Snippets)', 'slim-snippets' );
 						} else {
 							echo esc_html( $labels[ $item['result'] ] );
 						}
@@ -1214,6 +1273,10 @@ add_action(
 				$notes[] = '"' . $item['snippet']['name'] . '": ' . $item['note'];
 				continue;
 			}
+			if ( $item['existing'] ) {
+				$queue[] = $item['existing'];
+				continue;
+			}
 			list( $state, $note, $id ) = slim_snippets_import_snippet( $item['snippet'], true );
 			if ( 'imported' !== $state ) {
 				++$counts['skipped'];
@@ -1225,26 +1288,25 @@ add_action(
 			}
 		}
 
-		// Deactivate Code Snippets before activating the copies, so nothing runs
-		// twice even if this request dies in between. The copies skip the test run
-		// and the redeclaration check: Code Snippets already ran the same code in
-		// this request, so those would fail, and the code is known to run.
+		// Check the copies first, then deactivate Code Snippets and activate them
+		// with one rebuild, so the time with neither running is as short as possible.
+		$errors = slim_snippets_cs_check( $queue );
+		foreach ( array_filter( $errors ) as $id => $error ) {
+			update_post_meta( $id, '_slim_snippets_error', $error );
+			++$counts['inactive'];
+			/* translators: 1: snippet name, 2: error message */
+			$notes[] = sprintf( __( '"%1$s" left inactive: %2$s', 'slim-snippets' ), get_the_title( $id ), $error );
+		}
 		$file = plugin_basename( CODE_SNIPPETS_FILE );
 		if ( ! is_plugin_active_for_network( $file ) ) {
 			deactivate_plugins( $file );
 		}
-		foreach ( $queue as $id ) {
-			$error = slim_snippets_is_php( slim_snippets_scope( $id ) ) ? slim_snippets_lint( get_post_field( 'post_content', $id ) ) : '';
-			if ( $error ) {
-				update_post_meta( $id, '_slim_snippets_error', $error );
-				++$counts['inactive'];
-				/* translators: 1: snippet name, 2: error message */
-				$notes[] = sprintf( __( '"%1$s" left inactive: %2$s', 'slim-snippets' ), get_the_title( $id ), $error );
-			} else {
-				slim_snippets_set_status( $id, 'publish' );
-				++$counts['active'];
-			}
+		foreach ( array_keys( $errors, '', true ) as $id ) {
+			delete_post_meta( $id, '_slim_snippets_error' );
+			slim_snippets_set_status( $id, 'publish', '', false );
+			++$counts['active'];
 		}
+		slim_snippets_rebuild();
 
 		$total = $counts['active'] + $counts['inactive'];
 		$not   = array();

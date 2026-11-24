@@ -318,4 +318,43 @@ $check(
 	'Snippet box replaces the Publish box; no Slug box'
 );
 
+// 21. Code Snippets migration: an inactive copy already here is activated, not
+// skipped; duplicates in Code Snippets are copied once (active if either is);
+// copies that redeclare an active snippet or an earlier copy stay inactive.
+$cs_row = function ( $name, $code, $active ) {
+	return array( 'name' => $name, 'description' => '', 'code' => $code, 'tags' => '', 'scope' => 'global', 'priority' => 10, 'active' => $active, 'condition_id' => 0 );
+};
+$cs_old  = $make( '// cs old', 'global', array( 'post_title' => 'cs old' ) );
+$cs_live = $make( '// cs live', 'global', array( 'post_title' => 'cs live' ) );
+slim_snippets_set_status( $cs_live, 'publish' );
+$plan = slim_snippets_cs_plan(
+	array(
+		$cs_row( 'cs old', '// cs old', 1 ),
+		$cs_row( 'cs twin', '// twin', 0 ),
+		$cs_row( 'cs twin', '// twin', 1 ),
+		$cs_row( 'cs live', '// cs live', 1 ),
+	)
+);
+$check(
+	$cs_old === $plan[0]['existing'] && 'active' === $plan[0]['result']
+	&& 'active' === $plan[1]['result'] && 'skip' === $plan[2]['result']
+	&& 'skip' === $plan[3]['result'] && 'already in Slim Snippets' === $plan[3]['note'],
+	'migration plan: ' . wp_json_encode( array_map( fn( $i ) => array( $i['result'], $i['note'], $i['existing'] ), $plan ) )
+);
+$taken = $make( 'function slim_check_cs_taken() {}' );
+slim_snippets_set_status( $taken, 'publish' );
+$cs = array(
+	$make( 'function slim_check_cs_taken() {}' ),
+	$make( 'function slim_check_cs_new() {}' ),
+	$make( 'function slim_check_cs_new() {}' ),
+	$make( 'this is not php' ),
+	$make( 'body { color: red; }', 'site-css' ),
+);
+$errors = array_values( slim_snippets_cs_check( $cs ) );
+$check(
+	false !== strpos( $errors[0], 'Cannot redeclare function slim_check_cs_taken()' ) && '' === $errors[1]
+	&& false !== strpos( $errors[2], 'Cannot redeclare function slim_check_cs_new()' ) && '' !== $errors[3] && '' === $errors[4],
+	'migration copies checked for redeclaring: ' . wp_json_encode( $errors )
+);
+
 echo $slim_fail ? "\n$slim_fail FAILED\n" : "\nALL PASSED\n";

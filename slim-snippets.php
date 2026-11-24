@@ -460,11 +460,12 @@ function slim_snippets_activation_shutdown() {
  * Change a snippet's status directly, without going through wp_update_post()
  * and its hooks, then rebuild the list of active snippets.
  *
- * @param int    $id     Snippet ID.
- * @param string $status 'publish' (active) or 'draft' (inactive).
- * @param string $error  Error to record, if any.
+ * @param int    $id      Snippet ID.
+ * @param string $status  'publish' (active) or 'draft' (inactive).
+ * @param string $error   Error to record, if any.
+ * @param bool   $rebuild Rebuild the list now; false when the caller rebuilds once after a batch.
  */
-function slim_snippets_set_status( $id, $status, $error = '' ) {
+function slim_snippets_set_status( $id, $status, $error = '', $rebuild = true ) {
 	global $wpdb;
 
 	if ( 'slim_snippet' !== get_post_type( $id ) ) {
@@ -480,7 +481,9 @@ function slim_snippets_set_status( $id, $status, $error = '' ) {
 	if ( $error ) {
 		update_post_meta( $id, '_slim_snippets_error', $error );
 	}
-	slim_snippets_rebuild();
+	if ( $rebuild ) {
+		slim_snippets_rebuild();
+	}
 }
 
 register_activation_hook( __FILE__, 'slim_snippets_rebuild' );
