@@ -1078,8 +1078,10 @@ function slim_snippets_cs_plan( $rows = null ) {
 			'numberposts' => -1,
 		)
 	);
+	// Line endings are ignored: saving in the editor turns "\r\n" into "\n".
+	$key_of = fn( $name, $code ) => $name . "\0" . trim( str_replace( array( "\r\n", "\r" ), "\n", $code ) );
 	foreach ( $posts as $post ) {
-		$have[ $post->post_title . "\0" . trim( $post->post_content ) ] = $post;
+		$have[ $key_of( $post->post_title, $post->post_content ) ] = $post;
 	}
 	// A network-active Code Snippets is not deactivated here, so nothing may be activated.
 	$can_activate = ! defined( 'CODE_SNIPPETS_FILE' ) || ! is_plugin_active_for_network( plugin_basename( CODE_SNIPPETS_FILE ) );
@@ -1089,7 +1091,7 @@ function slim_snippets_cs_plan( $rows = null ) {
 		$name     = sanitize_text_field( $row['name'] );
 		$status   = (int) $row['active'] < 0 ? 'trash' : ( (int) $row['active'] ? 'active' : 'inactive' );
 		$active   = $can_activate && 'active' === $status && 'single-use' !== $row['scope'];
-		$key      = $name . "\0" . trim( $row['code'] );
+		$key      = $key_of( $name, $row['code'] );
 		$dup      = isset( $have[ $key ] ) ? $have[ $key ] : null;
 		$note     = '';
 		$existing = 0;

@@ -326,6 +326,7 @@ $cs_row = function ( $name, $code, $active ) {
 };
 $cs_old  = $make( '// cs old', 'global', array( 'post_title' => 'cs old' ) );
 $cs_live = $make( '// cs live', 'global', array( 'post_title' => 'cs live' ) );
+$make( "// a\n// b", 'global', array( 'post_title' => 'cs crlf' ) );
 slim_snippets_set_status( $cs_live, 'publish' );
 $plan = slim_snippets_cs_plan(
 	array(
@@ -333,12 +334,14 @@ $plan = slim_snippets_cs_plan(
 		$cs_row( 'cs twin', '// twin', 0 ),
 		$cs_row( 'cs twin', '// twin', 1 ),
 		$cs_row( 'cs live', '// cs live', 1 ),
+		$cs_row( 'cs crlf', "// a\r\n// b\r\n", 1 ),
 	)
 );
 $check(
 	$cs_old === $plan[0]['existing'] && 'active' === $plan[0]['result']
 	&& 'active' === $plan[1]['result'] && 'skip' === $plan[2]['result']
-	&& 'skip' === $plan[3]['result'] && 'already in Slim Snippets' === $plan[3]['note'],
+	&& 'skip' === $plan[3]['result'] && 'already in Slim Snippets' === $plan[3]['note']
+	&& 0 < $plan[4]['existing'],
 	'migration plan: ' . wp_json_encode( array_map( fn( $i ) => array( $i['result'], $i['note'], $i['existing'] ), $plan ) )
 );
 $taken = $make( 'function slim_check_cs_taken() {}' );
