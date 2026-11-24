@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.7
+Stable tag: 1.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,6 +85,9 @@ Slim Snippets is an independent plugin, but it owes several ideas to [Code Snipp
 Thank you to the Code Snippets authors.
 
 == Changelog ==
+
+= 1.0.8 =
+* The Export section of the Import / Export page lists each way to export: one snippet, several snippets, or every snippet that is not in the Trash.
 
 = 1.0.7 =
 * A "Snippets" link on the Plugins screen, before Deactivate.

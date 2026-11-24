@@ -979,7 +979,11 @@ function slim_snippets_import_page() {
 		</form>
 
 		<h2><?php esc_html_e( 'Export', 'slim-snippets' ); ?></h2>
-		<p><?php esc_html_e( 'Download every snippet that is not in the Trash. To export some, select them on the snippets list and use the Export bulk action.', 'slim-snippets' ); ?></p>
+		<ul class="ul-disc">
+			<li><?php esc_html_e( 'To export one snippet, hover over it on the All Snippets screen and click Export under its name.', 'slim-snippets' ); ?></li>
+			<li><?php esc_html_e( 'To export several snippets, select them on the All Snippets screen, choose Export from the Bulk actions menu, and click Apply.', 'slim-snippets' ); ?></li>
+			<li><?php esc_html_e( 'To export every snippet that is not in the Trash, click Export All Snippets below.', 'slim-snippets' ); ?></li>
+		</ul>
 		<p><a class="button" href="<?php echo esc_url( slim_snippets_action_url( 'export', 'all' ) ); ?>"><?php esc_html_e( 'Export All Snippets', 'slim-snippets' ); ?></a></p>
 	</div>
 	<?php
