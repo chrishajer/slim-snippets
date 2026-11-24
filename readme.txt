@@ -49,6 +49,8 @@ Only administrators can manage snippets. On multisite, only super admins can, be
 
 Every snippet is imported inactive, even if it was active in the export, so nothing runs until you activate it. Activating runs the usual checks. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and counted in the notice.
 
+Code Snippets stores descriptions as HTML. On import they become plain text: paragraphs and line breaks are kept, list items become "- " lines, and links keep their URL in parentheses.
+
 = A snippet broke my site. What now? =
 
 Add `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` to wp-config.php, fix or deactivate the snippet, then remove the line. On a single site, WordPress's recovery mode email also lets you log in with Slim Snippets paused.

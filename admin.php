@@ -705,14 +705,46 @@ function slim_snippets_download( $ids ) {
 }
 
 /**
+ * Convert a Code Snippets description (HTML from its visual editor) to the
+ * plain text Slim Snippets uses. Paragraphs become blank-line breaks, list
+ * items become "- " lines, and links keep their URL in parentheses.
+ *
+ * @param string $html Description HTML.
+ * @return string Plain text.
+ */
+function slim_snippets_html_to_text( $html ) {
+	$text = preg_replace_callback(
+		'#<a\s[^>]*href=(["\'])(.*?)\1[^>]*>(.*?)</a>#is',
+		function ( $m ) {
+			$label = trim( wp_strip_all_tags( $m[3] ) );
+			return ( '' === $label || $label === $m[2] ) ? $m[2] : $label . ' (' . $m[2] . ')';
+		},
+		(string) $html
+	);
+	$text = preg_replace(
+		array( '#<br\s*/?>#i', '#<li(?=[\s/>])[^>]*>#i', '#</li>#i', '#</(p|div|h[1-6]|ul|ol|pre|blockquote)>#i' ),
+		array( "\n", '- ', "\n", "\n\n" ),
+		$text
+	);
+	// Strip only the formatting tags a visual editor produces. Anything else,
+	// like the placeholder in "option_<key>", is text the author typed.
+	$text = preg_replace( '#</?(?:p|a|span|div|strong|b|em|i|u|s|del|ins|code|pre|ul|ol|h[1-6]|blockquote|sub|sup|hr|img)(?=[\s/>])[^>]*>#i', '', $text );
+	$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+	$text = str_replace( "\xC2\xA0", ' ', $text ); // Non-breaking spaces from &nbsp;.
+	$text = preg_replace( array( '/[ \t]+\n/', '/\n[ \t]+/', "/\n{3,}/" ), array( "\n", "\n", "\n\n" ), $text );
+	return trim( $text );
+}
+
+/**
  * Import one snippet from Slim Snippets or Code Snippets export data.
  * Imported snippets are always inactive, whatever the export says, so nothing
  * runs until someone activates it on purpose.
  *
- * @param array $snippet One entry of the export's "snippets" array.
+ * @param array $snippet            One entry of the export's "snippets" array.
+ * @param bool  $from_code_snippets Whether the file came from Code Snippets, whose descriptions are HTML.
  * @return array{0: string, 1: string} State ('imported', 'skipped' or 'error') and a reason.
  */
-function slim_snippets_import_snippet( $snippet ) {
+function slim_snippets_import_snippet( $snippet, $from_code_snippets = false ) {
 	$scope = isset( $snippet['scope'] ) ? (string) $snippet['scope'] : 'global';
 	if ( ! empty( $snippet['trashed'] ) ) {
 		return array( 'skipped', __( 'trashed snippet', 'slim-snippets' ) );
@@ -723,6 +755,7 @@ function slim_snippets_import_snippet( $snippet ) {
 	}
 
 	$desc = isset( $snippet['desc'] ) ? $snippet['desc'] : ( isset( $snippet['description'] ) ? $snippet['description'] : '' );
+	$desc = $from_code_snippets ? slim_snippets_html_to_text( $desc ) : $desc;
 	$id   = wp_insert_post(
 		wp_slash(
 			array(
@@ -814,8 +847,9 @@ add_action(
 				$reasons[] = __( 'a file is not a snippets export', 'slim-snippets' );
 				continue;
 			}
+			$from_cs = isset( $data['generator'] ) && 0 === strpos( (string) $data['generator'], 'Code Snippets' );
 			foreach ( $data['snippets'] as $snippet ) {
-				list( $state, $reason ) = is_array( $snippet ) ? slim_snippets_import_snippet( $snippet ) : array( 'error', 'bad entry' );
+				list( $state, $reason ) = is_array( $snippet ) ? slim_snippets_import_snippet( $snippet, $from_cs ) : array( 'error', 'bad entry' );
 				++$counts[ $state ];
 				if ( $reason ) {
 					$reasons[] = $reason;
