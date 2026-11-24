@@ -138,12 +138,17 @@ add_action(
 		if ( 'slim_snippet' !== $post->post_type ) {
 			return;
 		}
+		// The edit screen's $post is already escaped for editing (always for the
+		// excerpt, and for the content when the visual editor is off). Use the raw
+		// values so they are escaped exactly once.
+		$code = get_post_field( 'post_content', $post->ID, 'raw' );
+		$desc = get_post_field( 'post_excerpt', $post->ID, 'raw' );
 		?>
 		<div id="slim-snippets-editor">
 			<p><label for="slim-snippets-code"><strong><?php esc_html_e( 'Code', 'slim-snippets' ); ?></strong></label></p>
-			<textarea id="slim-snippets-code" name="content" class="widefat code" rows="20" spellcheck="false"><?php echo esc_textarea( $post->post_content ); ?></textarea>
+			<textarea id="slim-snippets-code" name="content" class="widefat code" rows="20" spellcheck="false"><?php echo esc_textarea( $code ); ?></textarea>
 			<p><label for="slim-snippets-desc"><strong><?php esc_html_e( 'Description', 'slim-snippets' ); ?></strong></label></p>
-			<textarea id="slim-snippets-desc" name="excerpt" class="widefat" rows="3"><?php echo esc_textarea( $post->post_excerpt ); ?></textarea>
+			<textarea id="slim-snippets-desc" name="excerpt" class="widefat" rows="3"><?php echo esc_textarea( $desc ); ?></textarea>
 		</div>
 		<?php
 	}

@@ -144,6 +144,22 @@ $check( '' === slim_snippets_html_to_text( '' ) && 'Plain text.' === slim_snippe
 $text = slim_snippets_html_to_text( "Clear the rg_gforms_license_info_<key> cache.\n\nUse <b>bold</b> <pre-wrap> <limit> <li class=\"x\">as-is." );
 $check( "Clear the rg_gforms_license_info_<key> cache.\n\nUse bold <pre-wrap> <limit> - as-is." === $text, 'typed placeholders kept, only formatting tags stripped: ' . wp_json_encode( $text ) );
 
+// 12. The edit screen escapes code and description exactly once, with the visual editor on or off.
+$id   = $make( 'echo "a < b && c";', 'global', array( 'post_excerpt' => 'x < y & "z"' ) );
+$ok   = true;
+foreach ( array( '__return_true', '__return_false' ) as $rich ) {
+	add_filter( 'user_can_richedit', $rich, 99 );
+	clean_post_cache( $id );
+	ob_start();
+	do_action( 'edit_form_after_title', get_post( $id, OBJECT, 'edit' ) );
+	$html = ob_get_clean();
+	remove_filter( 'user_can_richedit', $rich, 99 );
+	$ok = $ok
+		&& false !== strpos( $html, '>' . esc_textarea( 'echo "a < b && c";' ) . '</textarea>' )
+		&& false !== strpos( $html, '>' . esc_textarea( 'x < y & "z"' ) . '</textarea>' );
+}
+$check( $ok, 'editor textareas escaped once (visual editor on and off)' );
+
 // Clean up.
 foreach ( $slim_made as $id ) {
 	wp_delete_post( $id, true );
