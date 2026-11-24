@@ -59,7 +59,7 @@ To move snippets from Code Snippets on another site, export them there and impor
 
 If Code Snippets is also active on this site, use the migration above instead. While it is active, the functions in your snippets are already defined, so imported copies cannot be activated.
 
-By default every snippet is imported inactive, so nothing runs until you activate it. You can instead keep the status from the file (trashed snippets go to the Trash) or activate every snippet. Activating runs the usual checks: a snippet that fails them stays inactive and is named in the notice. Run-once snippets are always imported inactive, so an import never runs them. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and named in the notice.
+By default every snippet is imported inactive, so nothing runs until you activate it. You can choose to keep the status from the file (trashed snippets go to the Trash) or activate every snippet. Activating runs the usual checks: a snippet that fails them stays inactive and is named in the notice. Run-once snippets are always imported inactive, so an import never runs them. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and named in the notice.
 
 Code Snippets stores descriptions as HTML. On import they become plain text: paragraphs and line breaks are kept, list items become "- " lines, and links keep their URL in parentheses. The conversion is one way: if you export snippets back to Code Snippets, their descriptions stay plain text.
 
