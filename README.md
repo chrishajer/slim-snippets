@@ -3,7 +3,7 @@
 A small WordPress plugin for running PHP, CSS and JavaScript snippets without editing `functions.php`. It has no cloud features, upsells or tracking.
 
 - PHP snippets: run everywhere, admin only, front-end only, or once
-- CSS and JS snippets: front-end head or footer, or the admin head
+- CSS snippets in the front-end head or the admin head; JS snippets in the front-end head or footer
 - WordPress's built-in CodeMirror editor
 - PHP is syntax-checked, checked for functions and classes that already exist, and test-run before activation, so a snippet with errors stays inactive
 - Active snippets live in one autoloaded option, so running them adds no queries

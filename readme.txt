@@ -15,7 +15,7 @@ Run PHP, CSS and JavaScript snippets without editing functions.php. Small and fa
 Slim Snippets keeps the parts of a snippets plugin that matter day to day and leaves the rest out.
 
 * **PHP snippets** that run everywhere, only in the admin, only on the front end, or once.
-* **CSS and JavaScript snippets** printed in the front-end head or footer, or in the admin head.
+* **CSS and JavaScript snippets.** CSS is printed in the front-end head or the admin head. JavaScript is printed in the front-end head or footer.
 * **Syntax-highlighting editor** (the CodeMirror editor built into WordPress). The mode follows the snippet's scope.
 * **No activation with errors.** PHP is syntax-checked and test-run before it is activated. If it throws an error, dies with a fatal error, or declares a function or class that already exists, it stays inactive and the error is shown. If an active snippet throws an error on a later page load, the error is recorded and shown on the snippet, and the snippet stays active, so a visitor cannot switch it off by making it fail.
 * **Fast.** Active snippets are stored in one autoloaded option, so running them adds no database queries.
