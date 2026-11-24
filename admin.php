@@ -185,7 +185,7 @@ function slim_snippets_box( $post ) {
 	<p>
 		<label for="slim-snippets-priority"><strong><?php esc_html_e( 'Priority', 'slim-snippets' ); ?></strong></label><br>
 		<input type="number" id="slim-snippets-priority" name="menu_order" value="<?php echo esc_attr( $priority ); ?>" min="0" step="1" class="small-text">
-		<span class="description"><?php esc_html_e( 'Lower runs first.', 'slim-snippets' ); ?></span>
+		<span class="description"><?php esc_html_e( 'Lower runs sooner.', 'slim-snippets' ); ?></span>
 	</p>
 	<p>
 		<?php esc_html_e( 'Status:', 'slim-snippets' ); ?>
@@ -265,8 +265,13 @@ add_action(
 		if ( $pending['was_active'] ) {
 			update_post_meta( $id, '_slim_snippets_deactivated', time() );
 		}
-		if ( $pending['activate'] && slim_snippets_report( $id, slim_snippets_activate( $id ) ) ) {
-			slim_snippets_notice( 'success', __( 'Snippet is active.', 'slim-snippets' ) );
+		// Only say so when the status changed; re-saving an active snippet just says "Snippet saved."
+		if ( $pending['activate'] ) {
+			if ( slim_snippets_report( $id, slim_snippets_activate( $id ) ) && ! $pending['was_active'] ) {
+				slim_snippets_notice( 'success', __( 'Snippet is active.', 'slim-snippets' ) );
+			}
+		} elseif ( $pending['was_active'] ) {
+			slim_snippets_notice( 'success', __( 'Snippet is inactive.', 'slim-snippets' ) );
 		}
 	}
 );
