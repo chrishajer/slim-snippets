@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.10
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -97,7 +97,10 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.0.10 =
+= 1.1.0 =
+* A snippet that throws an error while loading stays active and the error is recorded. Before, it deactivated itself, so a visitor who could make a snippet fail (for example with an unexpected URL parameter) could switch it off.
+* If `DISALLOW_UNFILTERED_HTML` is true, nobody can manage snippets. Snippets that are already active keep running.
+* A search term with "$" or "\" finds tags as typed.
 * Migrating from Code Snippets activates a snippet's inactive copy that is already in Slim Snippets (for example from an earlier import), instead of skipping it. Matching ignores line endings.
 * Duplicate snippets in Code Snippets are copied once, and the copy is active if any of them was active.
 * A copy that declares a function or class that an active snippet or an earlier copy already declares stays inactive, with a note, instead of causing a fatal error.
