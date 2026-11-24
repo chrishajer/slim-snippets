@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.5
+Stable tag: 1.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,6 +85,9 @@ Slim Snippets is an independent plugin, but it owes several ideas to [Code Snipp
 Thank you to the Code Snippets authors.
 
 == Changelog ==
+
+= 1.0.6 =
+* The Description box on the snippet screen is taller (7 rows).
 
 = 1.0.5 =
 * Saving a snippet shows "Snippet is active." or "Snippet is inactive." only when the status changed. Saving without a status change shows only "Snippet saved."

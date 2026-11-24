@@ -154,7 +154,7 @@ add_action(
 			<p><label for="slim-snippets-code"><strong><?php esc_html_e( 'Code', 'slim-snippets' ); ?></strong></label></p>
 			<textarea id="slim-snippets-code" name="content" class="widefat code" rows="20" spellcheck="false"><?php echo esc_textarea( $code ); ?></textarea>
 			<p><label for="slim-snippets-desc"><strong><?php esc_html_e( 'Description', 'slim-snippets' ); ?></strong></label></p>
-			<textarea id="slim-snippets-desc" name="excerpt" class="widefat" rows="3"><?php echo esc_textarea( $desc ); ?></textarea>
+			<textarea id="slim-snippets-desc" name="excerpt" class="widefat" rows="7"><?php echo esc_textarea( $desc ); ?></textarea>
 		</div>
 		<?php
 	}
