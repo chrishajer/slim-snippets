@@ -1129,7 +1129,7 @@ function slim_snippets_cs_section() {
 	<ul class="ul-disc">
 		<li><?php esc_html_e( 'Code Snippets is active on this site. Migrating copies its snippets into Slim Snippets and then deactivates Code Snippets, so no function is declared twice.', 'slim-snippets' ); ?></li>
 		<li><?php esc_html_e( 'Snippets that are active in Code Snippets are active in Slim Snippets after migrating. Run-once snippets are copied inactive.', 'slim-snippets' ); ?></li>
-		<li><?php esc_html_e( 'The Code Snippets Plugin and its snippets are not changed or deleted, so you can switch back by reactivating it.', 'slim-snippets' ); ?></li>
+		<li><?php esc_html_e( 'The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it.', 'slim-snippets' ); ?></li>
 		<?php if ( $network ) : ?>
 			<li><strong><?php esc_html_e( 'Code Snippets is network-activated, so it is not deactivated here and every snippet is copied inactive.', 'slim-snippets' ); ?></strong></li>
 		<?php endif; ?>
