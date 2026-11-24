@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.9
+Stable tag: 1.0.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,13 @@ Slim Snippets is an independent plugin, but it owes several ideas to [Code Snipp
 Thank you to the Code Snippets authors.
 
 == Changelog ==
+
+= 1.0.10 =
+* Migrating from Code Snippets activates a snippet's inactive copy that is already in Slim Snippets (for example from an earlier import), instead of skipping it. Matching ignores line endings.
+* Duplicate snippets in Code Snippets are copied once, and the copy is active if any of them was active.
+* A copy that declares a function or class that an active snippet or an earlier copy already declares stays inactive, with a note, instead of causing a fatal error.
+* Code Snippets is deactivated only after every copy is checked, and the copies are then activated together, so the time with neither plugin running is as short as possible.
+* The migration notice and section are shown only to users who can activate plugins. A missing Code Snippets table no longer shows a database error.
 
 = 1.0.9 =
 * Migrate from Code Snippets on the same site in one step. While Code Snippets is active, the Import / Export page lists each of its snippets and what migrating will do with it. Migrating copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets. A notice on the Snippets screens and the Plugins screen links to it.
