@@ -456,6 +456,13 @@ function slim_snippets_insert_data( $data, $postarr, $unsanitized ) {
 		$data['post_content'] = wp_slash( $code );
 	}
 
+	// The description is plain text and is escaped wherever it is shown. Keep
+	// it as typed, so kses (DISALLOW_UNFILTERED_HTML, WP-CLI without --user)
+	// cannot delete text like "option_<key>".
+	if ( isset( $unsanitized['post_excerpt'] ) ) {
+		$data['post_excerpt'] = $unsanitized['post_excerpt'];
+	}
+
 	// New snippets default to priority 10, like Code Snippets.
 	if ( empty( $postarr['ID'] ) && ! isset( $unsanitized['menu_order'] ) ) {
 		$data['menu_order'] = 10;

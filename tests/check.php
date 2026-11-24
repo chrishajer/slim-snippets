@@ -10,7 +10,7 @@
  */
 
 // Dev-only script, not shipped in release zips.
-// phpcs:disable WordPress.WP.GlobalVariablesOverride, WordPress.NamingConventions.PrefixAllGlobals, WordPress.Security.EscapeOutput, WordPress.Arrays.ArrayDeclarationSpacing, Generic.Formatting.MultipleStatementAlignment
+// phpcs:disable WordPress.WP.GlobalVariablesOverride, WordPress.NamingConventions.PrefixAllGlobals, WordPress.Security.EscapeOutput, WordPress.Arrays.ArrayDeclarationSpacing, Generic.Formatting.MultipleStatementAlignment, WordPress.Arrays.MultipleStatementAlignment
 
 require_once dirname( SLIM_SNIPPETS_FILE ) . '/admin.php';
 
@@ -39,6 +39,10 @@ $make = function ( $code, $scope = 'global', $extra = array() ) use ( &$slim_mad
 	);
 	$slim_made[] = $id;
 	return $id;
+};
+
+$latest = function () {
+	return (int) get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => 'any', 'numberposts' => 1, 'orderby' => 'ID', 'order' => 'DESC', 'fields' => 'ids' ) )[0];
 };
 
 $in_index = function ( $id ) {
@@ -97,7 +101,7 @@ $check( 'draft' === get_post_status( $bad ) && false !== strpos( get_post_meta( 
 // 9. Export then import round-trips every field; an active snippet comes back inactive.
 $export = slim_snippets_export_data( array( $good ) );
 list( $state ) = slim_snippets_import_snippet( $export['snippets'][0] );
-$copy   = (int) get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => 'any', 'numberposts' => 1, 'orderby' => 'ID', 'order' => 'DESC', 'fields' => 'ids' ) )[0];
+$copy   = $latest();
 $slim_made[] = $copy;
 $again  = slim_snippets_export_data( array( $copy ) )['snippets'][0];
 $fields = array( 'name', 'desc', 'code', 'tags', 'scope', 'priority' );
@@ -120,7 +124,7 @@ $states = array();
 foreach ( $cs['snippets'] as $snippet ) {
 	$states[] = slim_snippets_import_snippet( $snippet, true )[0];
 }
-$cs_id       = (int) get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => 'any', 'numberposts' => 1, 'orderby' => 'ID', 'order' => 'DESC', 'fields' => 'ids' ) )[0];
+$cs_id       = $latest();
 $slim_made[] = $cs_id;
 $got         = slim_snippets_export_data( array( $cs_id ) )['snippets'][0];
 $check(
@@ -142,23 +146,60 @@ $text = slim_snippets_html_to_text( $html );
 $check( $want === $text, 'description HTML converted to text: ' . wp_json_encode( $text ) );
 $check( '' === slim_snippets_html_to_text( '' ) && 'Plain text.' === slim_snippets_html_to_text( 'Plain text.' ), 'empty and plain descriptions unchanged' );
 $text = slim_snippets_html_to_text( "Clear the rg_gforms_license_info_<key> cache.\n\nUse <b>bold</b> <pre-wrap> <limit> <li class=\"x\">as-is." );
-$check( "Clear the rg_gforms_license_info_<key> cache.\n\nUse bold <pre-wrap> <limit> - as-is." === $text, 'typed placeholders kept, only formatting tags stripped: ' . wp_json_encode( $text ) );
+$check( "Clear the rg_gforms_license_info_<key> cache.\n\nUse bold <pre-wrap> <limit>\n- as-is." === $text, 'typed placeholders kept, only formatting tags stripped: ' . wp_json_encode( $text ) );
+$cases = array(
+	"<p>Code:</p>\n<pre>if (x) {\n    y();\n}</pre>"                                         => "Code:\n\nif (x) {\n    y();\n}",
+	"Steps:<ul>\n<li>a</li>\n<li>b</li>\n</ul>"                                                => "Steps:\n- a\n- b",
+	'<ol><li>one<ul><li>sub</li></ul></li><li>two</li></ol>'                                   => "- one\n- sub\n- two",
+	'a<hr />b<!-- more --><div>c</div>'                                                        => "a\n\nb\n\nc",
+	'<table><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table><p><small>x</small></p>' => "a b\nc\n\nx",
+	'<a href="https://x.test/1" data-href="y">one</a> <a href=https://x.test/2>two</a>'      => 'one (https://x.test/1) two (https://x.test/2)',
+	'<a href="https://x.test/b">x.test/b</a> <a href="https://x.test/">opt_<key></a>'         => 'https://x.test/b opt_<key> (https://x.test/)',
+);
+foreach ( $cases as $in => $want ) {
+	$text = slim_snippets_html_to_text( $in );
+	$check( $want === $text, 'converts ' . wp_json_encode( $in ) . ': ' . wp_json_encode( $text ) );
+}
 
 // 12. The edit screen escapes code and description exactly once, with the visual editor on or off.
-$id   = $make( 'echo "a < b && c";', 'global', array( 'post_excerpt' => 'x < y & "z"' ) );
-$ok   = true;
+$edit_id = $make( 'echo "a < b && c";', 'global', array( 'post_excerpt' => 'x < y & "z"' ) );
+$edit_ok = true;
 foreach ( array( '__return_true', '__return_false' ) as $rich ) {
 	add_filter( 'user_can_richedit', $rich, 99 );
-	clean_post_cache( $id );
+	clean_post_cache( $edit_id );
 	ob_start();
-	do_action( 'edit_form_after_title', get_post( $id, OBJECT, 'edit' ) );
-	$html = ob_get_clean();
+	do_action( 'edit_form_after_title', get_post( $edit_id, OBJECT, 'edit' ) );
+	$edit_html = ob_get_clean();
 	remove_filter( 'user_can_richedit', $rich, 99 );
-	$ok = $ok
-		&& false !== strpos( $html, '>' . esc_textarea( 'echo "a < b && c";' ) . '</textarea>' )
-		&& false !== strpos( $html, '>' . esc_textarea( 'x < y & "z"' ) . '</textarea>' );
+	$edit_ok = $edit_ok
+		&& false !== strpos( $edit_html, '>' . esc_textarea( 'echo "a < b && c";' ) . '</textarea>' )
+		&& false !== strpos( $edit_html, '>' . esc_textarea( 'x < y & "z"' ) . '</textarea>' );
 }
-$check( $ok, 'editor textareas escaped once (visual editor on and off)' );
+$check( $edit_ok, 'editor textareas escaped once (visual editor on and off)' );
+
+// 13. Add Snippet (post-new.php) shows the default content and description.
+require_once ABSPATH . 'wp-admin/includes/post.php';
+$fill = function () {
+	return 'echo "pre & filled";';
+};
+add_filter( 'default_content', $fill );
+add_filter( 'default_excerpt', $fill );
+$new_post = get_default_post_to_edit( 'slim_snippet', true );
+remove_filter( 'default_content', $fill );
+remove_filter( 'default_excerpt', $fill );
+$slim_made[] = $new_post->ID;
+ob_start();
+do_action( 'edit_form_after_title', $new_post );
+$new_html = ob_get_clean();
+$check( 2 === substr_count( $new_html, '>' . esc_textarea( 'echo "pre & filled";' ) . '</textarea>' ), 'new snippet shows default content and description' );
+
+// 14. Descriptions are saved as typed even when kses filters posts (DISALLOW_UNFILTERED_HTML).
+kses_init_filters();
+slim_snippets_import_snippet( array( 'name' => 'kses', 'desc' => '<p>It&#8217;s &lt;head&gt; time, clear option_&lt;key&gt;</p>', 'code' => '// kses' ), true );
+kses_init();
+$kses_id     = $latest();
+$slim_made[] = $kses_id;
+$check( "It\u{2019}s <head> time, clear option_<key>" === get_post_field( 'post_excerpt', $kses_id ), 'kses does not strip the description: ' . wp_json_encode( get_post_field( 'post_excerpt', $kses_id ) ) );
 
 // Clean up.
 foreach ( $slim_made as $id ) {

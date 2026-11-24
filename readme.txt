@@ -87,8 +87,9 @@ Thank you to the Code Snippets authors.
 == Changelog ==
 
 = 1.0.2 =
-* Code Snippets descriptions are converted from HTML to plain text on import. Link URLs are kept in parentheses.
+* Code Snippets descriptions are converted from HTML to plain text on import. Paragraphs, lists and preformatted text keep their layout, and link URLs are kept in parentheses.
 * Fixed the edit screen escaping the code and description twice. The description showed entities such as &lt;, and with the visual editor turned off, saving could write entities into the code.
+* Descriptions are saved as typed. Where WordPress filters HTML (DISALLOW_UNFILTERED_HTML, or WP-CLI without --user), text such as "option_<key>" was deleted.
 
 = 1.0.1 =
 * Imported snippets are always inactive, even if they were active in the export.

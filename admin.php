@@ -138,11 +138,13 @@ add_action(
 		if ( 'slim_snippet' !== $post->post_type ) {
 			return;
 		}
-		// The edit screen's $post is already escaped for editing (always for the
-		// excerpt, and for the content when the visual editor is off). Use the raw
-		// values so they are escaped exactly once.
-		$code = get_post_field( 'post_content', $post->ID, 'raw' );
-		$desc = get_post_field( 'post_excerpt', $post->ID, 'raw' );
+		// On post.php, $post is already escaped for editing (always the excerpt,
+		// and the content when the visual editor is off), so take a raw copy and
+		// escape each value once. On post-new.php, $post is raw already and holds
+		// the default content and excerpt, so filter() returns it unchanged.
+		$raw  = $post->filter( 'raw' );
+		$code = $raw->post_content;
+		$desc = $raw->post_excerpt;
 		?>
 		<div id="slim-snippets-editor">
 			<p><label for="slim-snippets-code"><strong><?php esc_html_e( 'Code', 'slim-snippets' ); ?></strong></label></p>
@@ -718,25 +720,37 @@ function slim_snippets_download( $ids ) {
  * @return string Plain text.
  */
 function slim_snippets_html_to_text( $html ) {
-	$text = preg_replace_callback(
-		'#<a\s[^>]*href=(["\'])(.*?)\1[^>]*>(.*?)</a>#is',
-		function ( $m ) {
-			$label = trim( wp_strip_all_tags( $m[3] ) );
-			return ( '' === $label || $label === $m[2] ) ? $m[2] : $label . ' (' . $m[2] . ')';
-		},
-		(string) $html
+	// Whitespace next to block tags is source layout, not text. Inside <pre>
+	// it is text, so only the outside of <pre> is trimmed.
+	$block = 'p|div|ul|ol|li|h[1-6]|blockquote|table|thead|tbody|tfoot|tr|td|th|hr|figure|figcaption';
+	$text  = preg_replace(
+		array( '#<!--.*?-->#s', '#\s*(</?(?:' . $block . ')(?=[\s/>])[^>]*>)\s*#i', '#\s*(<pre(?=[\s>])[^>]*>)|(</pre>)\s*#i' ),
+		array( '', '$1', '$1$2' ),
+		str_replace( "\r\n", "\n", (string) $html )
 	);
-	$text = preg_replace(
-		array( '#<br\s*/?>#i', '#<li(?=[\s/>])[^>]*>#i', '#</li>#i', '#</(p|div|h[1-6]|ul|ol|pre|blockquote)>#i' ),
-		array( "\n", '- ', "\n", "\n\n" ),
+	$text  = preg_replace_callback(
+		'#<a\s(?:[^>]*?\s)?href\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))[^>]*>(.*?)</a>#is',
+		function ( $m ) {
+			$url   = $m[1] . $m[2] . $m[3];
+			$plain = array_map( 'html_entity_decode', array( trim( wp_strip_all_tags( $m[4] ) ), $url ) );
+			$same  = in_array( $plain[0], array( '', $plain[1], preg_replace( '#^[a-z]+:(//)?#i', '', $plain[1] ) ), true );
+			return $same ? $url : $m[4] . ' (' . $url . ')';
+		},
 		$text
 	);
-	// Strip only the formatting tags a visual editor produces. Anything else,
-	// like the placeholder in "option_<key>", is text the author typed.
-	$text = preg_replace( '#</?(?:p|a|span|div|strong|b|em|i|u|s|del|ins|code|pre|ul|ol|h[1-6]|blockquote|sub|sup|hr|img)(?=[\s/>])[^>]*>#i', '', $text );
+	// Line breaks for blocks. "</li>" goes first so a nested list's "\n" and
+	// the next "<li>" merge into one line break.
+	$text = preg_replace(
+		array( '#\s*<br\s*/?>\n?#i', '#</li>#i', '#<tr(?=[\s/>])[^>]*>|</(?:ul|ol)>#i', '#\n?<li(?=[\s/>])[^>]*>#i', '#</t[dh]>#i', '#</?(?:p|div|h[1-6]|blockquote|pre|table|hr|figure)(?=[\s/>])[^>]*>#i' ),
+		array( "\n", '', "\n", "\n- ", ' ', "\n\n" ),
+		$text
+	);
+	// Strip only the formatting tags an editor produces. Anything else, like
+	// the placeholder in "option_<key>", is text the author typed.
+	$text = preg_replace( '#</?(?:a|abbr|b|blockquote|cite|code|del|div|em|figcaption|figure|font|h[1-6]|hr|i|img|ins|kbd|li|mark|ol|p|pre|q|s|small|span|strong|sub|sup|table|tbody|td|tfoot|th|thead|tr|u|ul)(?=[\s/>])[^>]*>#i', '', $text );
 	$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 	$text = str_replace( "\xC2\xA0", ' ', $text ); // Non-breaking spaces from &nbsp;.
-	$text = preg_replace( array( '/[ \t]+\n/', '/\n[ \t]+/', "/\n{3,}/" ), array( "\n", "\n", "\n\n" ), $text );
+	$text = preg_replace( array( '/[ \t]+\n/', "/\n{3,}/" ), array( "\n", "\n\n" ), $text );
 	return trim( $text );
 }
 
