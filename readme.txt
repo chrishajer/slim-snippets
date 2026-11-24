@@ -89,6 +89,8 @@ Thank you to the Code Snippets authors.
 = 1.0.3 =
 * The Snippet box (scope, priority and the Save buttons) can no longer be hidden in Screen Options.
 * Removed the Slug box from the snippet screen. Snippets have no URL.
+* The Snippet box has the same padding as the other boxes.
+* The activate button says "Save & Run Once" as soon as you choose the run-once scope.
 
 = 1.0.2 =
 * Code Snippets descriptions are converted from HTML to plain text on import. Paragraphs, lists and preformatted text keep their layout, and link URLs are kept in parentheses.

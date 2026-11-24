@@ -281,6 +281,10 @@ add_action(
 		// Autosave would read an empty #content and could overwrite the code.
 		wp_dequeue_script( 'autosave' );
 
+		// Core removes the padding of the Publish box (#submitdiv), whose ID the
+		// Snippet box reuses. Give it the padding the other boxes have.
+		wp_add_inline_style( 'wp-admin', '#poststuff #submitdiv .inside{margin:6px 0 0;padding:0 12px 12px}' );
+
 		$settings = wp_enqueue_code_editor( array( 'type' => 'text/x-php' ) );
 		if ( false === $settings ) {
 			return; // The user turned syntax highlighting off: plain textarea.
@@ -290,13 +294,18 @@ add_action(
 			sprintf(
 				'jQuery( function ( $ ) {
 					var modes = { "site-css": "css", "admin-css": "css", "site-head-js": "javascript", "site-footer-js": "javascript" };
-					var editor = wp.codeEditor.initialize( "slim-snippets-code", %s ).codemirror;
+					var editor = wp.codeEditor.initialize( "slim-snippets-code", %1$s ).codemirror;
+					var labels = %2$s;
 					var scope = $( "#slim-snippets-scope" );
-					function sync() { editor.setOption( "mode", modes[ scope.val() ] || "text/x-php" ); }
+					function sync() {
+						editor.setOption( "mode", modes[ scope.val() ] || "text/x-php" );
+						$( "#submitdiv button[value=activate]" ).text( labels[ "single-use" === scope.val() ? 1 : 0 ] );
+					}
 					scope.on( "change", sync );
 					sync();
 				} );',
-				wp_json_encode( $settings )
+				wp_json_encode( $settings ),
+				wp_json_encode( array( __( 'Save & Activate', 'slim-snippets' ), __( 'Save & Run Once', 'slim-snippets' ) ) )
 			)
 		);
 		wp_add_inline_style( 'code-editor', '#slim-snippets-editor{margin-top:1em}#slim-snippets-editor .CodeMirror{height:60vh;min-height:300px;border:1px solid #c3c4c7}' );
