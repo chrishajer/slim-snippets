@@ -1200,10 +1200,15 @@ add_action(
 			exit;
 		}
 
-		$counts = array_fill_keys( array( 'active', 'inactive', 'skipped' ), 0 );
+		$counts = array_fill_keys( array( 'active', 'inactive', 'trash', 'skipped' ), 0 );
 		$notes  = array();
 		$queue  = array();
 		foreach ( slim_snippets_cs_plan() as $item ) {
+			// Trashed snippets are only counted; listing them would bury the notes that matter.
+			if ( 'trash' === $item['status'] ) {
+				++$counts['trash'];
+				continue;
+			}
 			if ( 'skip' === $item['result'] ) {
 				++$counts['skipped'];
 				$notes[] = '"' . $item['snippet']['name'] . '": ' . $item['note'];
@@ -1242,16 +1247,27 @@ add_action(
 		}
 
 		$total = $counts['active'] + $counts['inactive'];
+		$not   = array();
+		if ( $counts['trash'] ) {
+			/* translators: %d: number of snippets */
+			$not[] = sprintf( __( '%d in the Code Snippets Trash', 'slim-snippets' ), $counts['trash'] );
+		}
+		if ( $counts['skipped'] ) {
+			/* translators: %d: number of snippets */
+			$not[] = sprintf( __( '%d listed below', 'slim-snippets' ), $counts['skipped'] );
+		}
 		slim_snippets_notice(
 			$notes ? 'warning' : 'success',
 			sprintf(
-				/* translators: 1: migrated count, 2: active, 3: inactive, 4: not migrated */
-				_n( 'Migrated %1$d snippet from Code Snippets: %2$d active, %3$d inactive. Not migrated: %4$d.', 'Migrated %1$d snippets from Code Snippets: %2$d active, %3$d inactive. Not migrated: %4$d.', $total, 'slim-snippets' ),
+				/* translators: 1: migrated count, 2: active, 3: inactive */
+				_n( 'Migrated %1$d snippet from Code Snippets: %2$d active, %3$d inactive.', 'Migrated %1$d snippets from Code Snippets: %2$d active, %3$d inactive.', $total, 'slim-snippets' ),
 				$total,
 				$counts['active'],
-				$counts['inactive'],
-				$counts['skipped']
-			) . ( is_plugin_active( $file ) ? '' : ' ' . __( 'The Code Snippets plugin is deactivated.', 'slim-snippets' ) ),
+				$counts['inactive']
+			)
+			/* translators: %s: for example "115 in the Code Snippets Trash, 2 listed below" */
+			. ( $not ? ' ' . sprintf( __( 'Not migrated: %s.', 'slim-snippets' ), implode( ', ', $not ) ) : '' )
+			. ( is_plugin_active( $file ) ? '' : ' ' . __( 'The Code Snippets plugin is deactivated.', 'slim-snippets' ) ),
 			implode( "\n", $notes )
 		);
 		wp_safe_redirect( $back );
