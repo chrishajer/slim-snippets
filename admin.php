@@ -1251,7 +1251,7 @@ add_action(
 				$counts['active'],
 				$counts['inactive'],
 				$counts['skipped']
-			) . ( is_plugin_active( $file ) ? '' : ' ' . __( 'Code Snippets is deactivated.', 'slim-snippets' ) ),
+			) . ( is_plugin_active( $file ) ? '' : ' ' . __( 'The Code Snippets plugin is deactivated.', 'slim-snippets' ) ),
 			implode( "\n", $notes )
 		);
 		wp_safe_redirect( $back );
