@@ -17,7 +17,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **PHP snippets** that run everywhere, only in the admin, only on the front end, or once.
 * **CSS and JavaScript snippets** printed in the front-end head or footer, or in the admin head.
 * **Syntax-highlighting editor** (the CodeMirror editor built into WordPress). The mode follows the snippet's scope.
-* **No activation with errors.** PHP is syntax-checked and test-run before it is activated. If it throws an error, dies with a fatal error, or declares a function or class that already exists, it stays inactive and the error is shown. If an active snippet throws an error on a later page load, it deactivates itself and records the error.
+* **No activation with errors.** PHP is syntax-checked and test-run before it is activated. If it throws an error, dies with a fatal error, or declares a function or class that already exists, it stays inactive and the error is shown. If an active snippet throws an error on a later page load, the error is recorded and shown on the snippet, and the snippet stays active, so a visitor cannot switch it off by making it fail.
 * **Fast.** Active snippets are stored in one autoloaded option, so running them adds no database queries.
 * **Priority.** Lower numbers run first.
 * **Title, code, description and tags** for each snippet.
@@ -31,7 +31,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 
 Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
 
-Only administrators can manage snippets. On multisite, only super admins can, because snippets run PHP.
+Only administrators can manage snippets. On multisite, only super admins can, because snippets run PHP. If wp-config.php sets `DISALLOW_UNFILTERED_HTML` to true, nobody can manage snippets: that setting stops even administrators from adding their own JavaScript, and snippets add JavaScript and PHP. Snippets that are already active keep running.
 
 == Installation ==
 

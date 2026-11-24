@@ -110,7 +110,8 @@ slim_snippets_activate( $late );
 $ids   = wp_list_pluck( (array) get_option( 'slim_snippets_active' ), 0 );
 $check( 'ok' === $state && array_search( $css, $ids, true ) < array_search( $good, $ids, true ) && array_search( $good, $ids, true ) < array_search( $late, $ids, true ), 'CSS activates; index sorted by priority' );
 
-// 8. Runner deactivates a snippet that throws at load time. Only this snippet
+// 8. Runner keeps a snippet that throws at load time active and records the
+// error, so a visitor cannot switch it off. Only this snippet
 // runs: the site's own active snippets already ran when WordPress loaded.
 $bad      = $make( "throw new LogicException( 'late boom' );" );
 $only_bad = function () use ( $bad ) {
@@ -120,7 +121,8 @@ slim_snippets_set_status( $bad, 'publish' );
 add_filter( 'pre_option_slim_snippets_active', $only_bad );
 slim_snippets_run();
 remove_filter( 'pre_option_slim_snippets_active', $only_bad );
-$check( 'draft' === get_post_status( $bad ) && false !== strpos( get_post_meta( $bad, '_slim_snippets_error', true ), 'late boom' ), 'runner deactivates throwing snippet' );
+$check( 'publish' === get_post_status( $bad ) && false !== strpos( get_post_meta( $bad, '_slim_snippets_error', true ), 'late boom' ), 'runner keeps throwing snippet active, records error' );
+slim_snippets_set_status( $bad, 'draft' );
 
 // 9. Export then import round-trips every field; an active snippet comes back inactive.
 $export = slim_snippets_export_data( array( $good ) );

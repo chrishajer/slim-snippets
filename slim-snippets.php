@@ -38,11 +38,16 @@ const SLIM_SNIPPETS_OUTPUT_HOOKS = array(
 
 /**
  * Capability needed to manage snippets. On multisite only super admins may
- * run PHP, because site admins do not have unfiltered_html.
+ * run PHP, because site admins do not have unfiltered_html. A site that sets
+ * DISALLOW_UNFILTERED_HTML does not want anyone adding JavaScript or PHP, so
+ * nobody may manage snippets there (active ones keep running).
  *
  * @return string
  */
 function slim_snippets_cap() {
+	if ( defined( 'DISALLOW_UNFILTERED_HTML' ) && DISALLOW_UNFILTERED_HTML ) {
+		return 'do_not_allow';
+	}
 	return is_multisite() ? 'manage_network_options' : 'manage_options';
 }
 
@@ -235,7 +240,11 @@ function slim_snippets_run() {
 
 		list( $error ) = slim_snippets_eval( $code );
 		if ( $error ) {
-			slim_snippets_set_status( $id, 'draft', slim_snippets_describe( $error ) );
+			// Record the error, but keep the snippet active: any visitor can make
+			// code throw (with ?param[]=x, say) and must not be able to switch a
+			// snippet off. Only the first error is kept until the next save, so
+			// visitors cannot cause a database write on every request.
+			add_post_meta( $id, '_slim_snippets_error', slim_snippets_describe( $error ), true );
 		}
 	}
 }
