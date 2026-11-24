@@ -108,45 +108,4 @@ Thank you to the Code Snippets authors.
 * Code Snippets is deactivated only after every copy is checked, and the copies are then activated together, so the time with neither plugin running is as short as possible.
 * The migration notice and section are shown only to users who can activate plugins. A missing Code Snippets table no longer shows a database error.
 
-= 1.0.9 =
-* Migrate from Code Snippets on the same site in one step. While Code Snippets is active, the Import / Export page lists each of its snippets and what migrating will do with it. Migrating copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets. A notice on the Snippets screens and the Plugins screen links to it.
-
-= 1.0.8 =
-* The Export section of the Import / Export page lists each way to export: one snippet, several snippets, or every snippet that is not in the Trash.
-
-= 1.0.7 =
-* A "Snippets" link on the Plugins screen, before Deactivate.
-* The Import / Export page has a larger drop zone for import files, and its browse button looks like the other WordPress buttons.
-* The import notes on the Import / Export page are a bulleted list, with clearer wording about trashed snippets and migrating from Code Snippets.
-* In the Extended view of the snippets list, a snippet without a description shows "No description" in grey italics instead of the start of its code.
-
-= 1.0.6 =
-* The Description box on the snippet screen is taller (7 rows).
-
-= 1.0.5 =
-* Saving a snippet shows "Snippet is active." or "Snippet is inactive." only when the status changed. Saving without a status change shows only "Snippet saved."
-* The priority hint says "Lower runs sooner."
-
-= 1.0.4 =
-* Import options: import every snippet inactive (the default), keep the status from the file (including the Trash), or activate every snippet. Run-once snippets are never run by an import.
-* Activation stops a snippet that declares a function or class that already exists, also in an active snippet that does not run on the current screen, instead of ending in a fatal error.
-* Import notices name each skipped snippet and each snippet that could not be activated.
-* The Snippets menu lists Import / Export before Tags.
-
-= 1.0.3 =
-* The Snippet box (scope, priority and the Save buttons) can no longer be hidden in Screen Options.
-* Removed the Slug box from the snippet screen. Snippets have no URL.
-* The Snippet box has the same padding as the other boxes.
-* The activate button says "Save & Run Once" as soon as you choose the run-once scope.
-
-= 1.0.2 =
-* Code Snippets descriptions are converted from HTML to plain text on import. Paragraphs, lists and preformatted text keep their layout, and link URLs are kept in parentheses.
-* Fixed the edit screen escaping the code and description twice. The description showed entities such as &lt;, and with the visual editor turned off, saving could write entities into the code.
-* Descriptions are saved as typed. Where WordPress filters HTML (DISALLOW_UNFILTERED_HTML, or WP-CLI without --user), text such as "option_<key>" was deleted.
-* Revisions keep the code and description exactly as saved, so restoring a revision no longer brings back filtered text.
-
-= 1.0.1 =
-* Imported snippets are always inactive, even if they were active in the export.
-
-= 1.0.0 =
-* First release.
+Older versions are listed in changelog.txt.
