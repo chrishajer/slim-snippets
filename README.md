@@ -9,7 +9,7 @@ A small WordPress plugin for running PHP, CSS and JavaScript snippets without ed
 - Active snippets live in one autoloaded option, so running them adds no queries
 - Priority, tags, description, revisions
 - All / Active / Inactive / Recently Active / Trash views; sort by name, created, modified, ID or priority; search across code, description and tags
-- JSON import and export, compatible with Code Snippets in both directions
+- JSON import and export, compatible with Code Snippets in both directions; imported snippets are always inactive
 - Safe mode: `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` or `?slim-snippets-safe-mode=1`
 
 ## Install

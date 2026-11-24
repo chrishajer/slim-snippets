@@ -94,14 +94,18 @@ slim_snippets_set_status( $bad, 'publish' );
 slim_snippets_run();
 $check( 'draft' === get_post_status( $bad ) && false !== strpos( get_post_meta( $bad, '_slim_snippets_error', true ), 'late boom' ), 'runner deactivates throwing snippet' );
 
-// 9. Export then import round-trips every field.
+// 9. Export then import round-trips every field; an active snippet comes back inactive.
 $export = slim_snippets_export_data( array( $good ) );
 list( $state ) = slim_snippets_import_snippet( $export['snippets'][0] );
 $copy   = (int) get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => 'any', 'numberposts' => 1, 'orderby' => 'ID', 'order' => 'DESC', 'fields' => 'ids' ) )[0];
 $slim_made[] = $copy;
 $again  = slim_snippets_export_data( array( $copy ) )['snippets'][0];
-$fields = array( 'name', 'desc', 'code', 'tags', 'scope', 'priority', 'active' );
-$check( 'active' === $state && array_intersect_key( $again, array_flip( $fields ) ) === array_intersect_key( $export['snippets'][0], array_flip( $fields ) ), 'export/import round trip' );
+$fields = array( 'name', 'desc', 'code', 'tags', 'scope', 'priority' );
+$check(
+	'imported' === $state && true === $export['snippets'][0]['active'] && false === $again['active'] && ! $in_index( $copy )
+	&& array_intersect_key( $again, array_flip( $fields ) ) === array_intersect_key( $export['snippets'][0], array_flip( $fields ) ),
+	'export/import round trip; import is inactive'
+);
 
 // 10. Code Snippets export: default fields omitted, unsupported and trashed skipped.
 $cs = json_decode(
@@ -120,10 +124,11 @@ $cs_id       = (int) get_posts( array( 'post_type' => 'slim_snippet', 'post_stat
 $slim_made[] = $cs_id;
 $got         = slim_snippets_export_data( array( $cs_id ) )['snippets'][0];
 $check(
-	array( 'active', 'skipped', 'skipped' ) === $states
+	array( 'imported', 'skipped', 'skipped' ) === $states
 	&& 'CS sample' === $got['name'] && '<p>From Code Snippets.</p>' === $got['desc']
-	&& array( 'One', 'Two' ) === $got['tags'] && 'global' === $got['scope'] && 10 === $got['priority'] && true === $got['active'],
-	'Code Snippets import maps fields and defaults'
+	&& array( 'One', 'Two' ) === $got['tags'] && 'global' === $got['scope'] && 10 === $got['priority']
+	&& false === $got['active'] && ! $in_index( $cs_id ) && ! has_filter( 'slim_check_cs' ),
+	'Code Snippets import maps fields and defaults, stays inactive, does not run'
 );
 
 // Clean up.

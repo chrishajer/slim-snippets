@@ -706,19 +706,20 @@ function slim_snippets_download( $ids ) {
 
 /**
  * Import one snippet from Slim Snippets or Code Snippets export data.
- * It is added as inactive, then activated through the usual checks if it was
- * active in the export. Single-use snippets are never run on import.
+ * Imported snippets are always inactive, whatever the export says, so nothing
+ * runs until someone activates it on purpose.
  *
  * @param array $snippet One entry of the export's "snippets" array.
- * @return array{0: string, 1: string} State ('imported', 'active', 'skipped' or 'error') and a reason.
+ * @return array{0: string, 1: string} State ('imported', 'skipped' or 'error') and a reason.
  */
 function slim_snippets_import_snippet( $snippet ) {
 	$scope = isset( $snippet['scope'] ) ? (string) $snippet['scope'] : 'global';
 	if ( ! empty( $snippet['trashed'] ) ) {
-		return array( 'skipped', 'trashed' );
+		return array( 'skipped', __( 'trashed snippet', 'slim-snippets' ) );
 	}
 	if ( ! array_key_exists( $scope, slim_snippets_scopes() ) ) {
-		return array( 'skipped', $scope );
+		/* translators: %s: scope name from the export file */
+		return array( 'skipped', sprintf( __( 'unsupported scope "%s"', 'slim-snippets' ), $scope ) );
 	}
 
 	$desc = isset( $snippet['desc'] ) ? $snippet['desc'] : ( isset( $snippet['description'] ) ? $snippet['description'] : '' );
@@ -744,9 +745,6 @@ function slim_snippets_import_snippet( $snippet ) {
 	$tags = is_array( $tags ) ? $tags : explode( ',', (string) $tags );
 	wp_set_post_terms( $id, array_filter( array_map( 'sanitize_text_field', $tags ) ), 'slim_snippet_tag' );
 
-	if ( ! empty( $snippet['active'] ) && 'single-use' !== $scope && slim_snippets_report( $id, slim_snippets_activate( $id ) ) ) {
-		return array( 'active', '' );
-	}
 	return array( 'imported', '' );
 }
 
@@ -773,8 +771,8 @@ function slim_snippets_import_page() {
 		<h1><?php esc_html_e( 'Import / Export Snippets', 'slim-snippets' ); ?></h1>
 
 		<h2><?php esc_html_e( 'Import', 'slim-snippets' ); ?></h2>
-		<p><?php esc_html_e( 'Upload JSON files exported from Slim Snippets or Code Snippets. Snippets that were active are activated only if they pass the same checks as activating by hand. Single-use snippets are imported inactive and never run on import.', 'slim-snippets' ); ?></p>
-		<p><?php esc_html_e( 'Moving from Code Snippets? Deactivate it first. If it still runs the same snippets, a function declared twice stops the import with a fatal error.', 'slim-snippets' ); ?></p>
+		<p><?php esc_html_e( 'Upload JSON files exported from Slim Snippets or Code Snippets. Every snippet is imported inactive, even if it was active in the export, so nothing runs until you activate it.', 'slim-snippets' ); ?></p>
+		<p><?php esc_html_e( 'Moving from Code Snippets? Deactivate it before you activate the imported snippets. If it still runs the same snippets, a function declared twice stops the activation with a fatal error.', 'slim-snippets' ); ?></p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
 			<input type="hidden" name="action" value="slim_snippets_import">
 			<?php wp_nonce_field( 'slim_snippets_import' ); ?>
@@ -799,7 +797,6 @@ add_action(
 
 		$counts  = array(
 			'imported' => 0,
-			'active'   => 0,
 			'skipped'  => 0,
 			'error'    => 0,
 		);
@@ -819,8 +816,7 @@ add_action(
 			}
 			foreach ( $data['snippets'] as $snippet ) {
 				list( $state, $reason ) = is_array( $snippet ) ? slim_snippets_import_snippet( $snippet ) : array( 'error', 'bad entry' );
-				++$counts[ 'active' === $state ? 'imported' : $state ];
-				$counts['active'] += (int) ( 'active' === $state );
+				++$counts[ $state ];
 				if ( $reason ) {
 					$reasons[] = $reason;
 				}
@@ -830,10 +826,9 @@ add_action(
 		slim_snippets_notice(
 			$counts['error'] ? 'warning' : 'success',
 			sprintf(
-				/* translators: 1: imported count, 2: activated count, 3: skipped count */
-				__( 'Imported %1$d snippets (%2$d activated). Skipped %3$d.', 'slim-snippets' ),
+				/* translators: 1: imported count, 2: skipped count */
+				_n( 'Imported %1$d snippet (inactive). Skipped %2$d.', 'Imported %1$d snippets (all inactive). Skipped %2$d.', $counts['imported'], 'slim-snippets' ),
 				$counts['imported'],
-				$counts['active'],
 				$counts['skipped'] + $counts['error']
 			),
 			$reasons ? __( 'Skipped or failed:', 'slim-snippets' ) . ' ' . implode( ', ', array_unique( $reasons ) ) : ''

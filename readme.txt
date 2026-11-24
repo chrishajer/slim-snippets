@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,7 +25,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **Sorting** by name, created date, modified date, ID or priority, ascending or descending.
 * **Search** across the name, code, description and tags.
 * **Revisions** of the code, title and description.
-* **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction.
+* **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction. Imported snippets are always inactive until you activate them.
 * **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in wp-config.php, or add `?slim-snippets-safe-mode=1` to an admin URL while logged in.
 
 Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
@@ -43,10 +43,11 @@ Only administrators can manage snippets. On multisite, only super admins can, be
 = How do I move my snippets from Code Snippets? =
 
 1. In Code Snippets, select the snippets you want to keep and choose the Export bulk action.
-2. Deactivate Code Snippets. If it keeps running the same snippets, any function they declare would be declared twice and stop the import with a fatal error.
-3. In Slim Snippets, go to Snippets > Import / Export and upload the file.
+2. In Slim Snippets, go to Snippets > Import / Export and upload the file.
+3. Deactivate Code Snippets. If it keeps running the same snippets, any function they declare would be declared twice and stop the activation with a fatal error.
+4. Activate the imported snippets you want, one at a time or with the Activate bulk action.
 
-Snippets that were active in the export are activated, but only if they pass the same checks as activating by hand. Single-use snippets are imported inactive and never run during the import. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and counted in the notice.
+Every snippet is imported inactive, even if it was active in the export, so nothing runs until you activate it. Activating runs the usual checks. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and counted in the notice.
 
 = A snippet broke my site. What now? =
 
@@ -82,6 +83,9 @@ Slim Snippets is an independent plugin, but it owes several ideas to [Code Snipp
 Thank you to the Code Snippets authors.
 
 == Changelog ==
+
+= 1.0.1 =
+* Imported snippets are always inactive, even if they were active in the export.
 
 = 1.0.0 =
 * First release.
