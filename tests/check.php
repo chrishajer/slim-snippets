@@ -155,6 +155,8 @@ $cases = array(
 	'<table><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table><p><small>x</small></p>' => "a b\nc\n\nx",
 	'<a href="https://x.test/1" data-href="y">one</a> <a href=https://x.test/2>two</a>'      => 'one (https://x.test/1) two (https://x.test/2)',
 	'<a href="https://x.test/b">x.test/b</a> <a href="https://x.test/">opt_<key></a>'         => 'https://x.test/b opt_<key> (https://x.test/)',
+	"Intro\n\n<ul>\n<li>a</li>\n</ul>\n\nMore"                                               => "Intro\n\n- a\n\nMore",
+	'<ul><li><p>a</p></li><li><p>b</p></li></ul>'                                              => "- a\n\n- b",
 );
 foreach ( $cases as $in => $want ) {
 	$text = slim_snippets_html_to_text( $in );
@@ -200,6 +202,23 @@ kses_init();
 $kses_id     = $latest();
 $slim_made[] = $kses_id;
 $check( "It\u{2019}s <head> time, clear option_<key>" === get_post_field( 'post_excerpt', $kses_id ), 'kses does not strip the description: ' . wp_json_encode( get_post_field( 'post_excerpt', $kses_id ) ) );
+
+// 15. Revisions keep the raw code and description too, so restoring one is safe under kses.
+$rev_id = $make( "echo '<b>x</b>';", 'global', array( 'post_excerpt' => 'old' ) );
+kses_init_filters();
+wp_update_post( wp_slash( array( 'ID' => $rev_id, 'post_excerpt' => 'new option_<key>' ) ) );
+kses_init();
+$rev = current( wp_get_post_revisions( $rev_id ) );
+$check( $rev && "echo '<b>x</b>';" === $rev->post_content && 'new option_<key>' === $rev->post_excerpt, 'revisions keep raw code and description: ' . wp_json_encode( $rev ? array( $rev->post_content, $rev->post_excerpt ) : null ) );
+
+// 16. On a utf8mb3 column, emoji in the description become entities, as core does.
+$utf8 = function ( $charset, $table, $column ) {
+	return 'post_excerpt' === $column ? 'utf8' : $charset;
+};
+add_filter( 'pre_get_col_charset', $utf8, 10, 3 );
+$emoji_id = $make( '// emoji', 'global', array( 'post_excerpt' => "Party \u{1F389}" ) );
+remove_filter( 'pre_get_col_charset', $utf8, 10 );
+$check( 'Party &#x1f389;' === get_post_field( 'post_excerpt', $emoji_id ), 'utf8mb3 description stores emoji as entities: ' . wp_json_encode( get_post_field( 'post_excerpt', $emoji_id ) ) );
 
 // Clean up.
 foreach ( $slim_made as $id ) {

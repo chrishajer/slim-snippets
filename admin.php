@@ -720,11 +720,13 @@ function slim_snippets_download( $ids ) {
  * @return string Plain text.
  */
 function slim_snippets_html_to_text( $html ) {
-	// Whitespace next to block tags is source layout, not text. Inside <pre>
-	// it is text, so only the outside of <pre> is trimmed.
+	// One line break next to a block tag is source layout, not text. A blank
+	// line is a paragraph break (descriptions saved without <p> tags), so it
+	// keeps one newline. Inside <pre>, whitespace is text and is not trimmed.
 	$block = 'p|div|ul|ol|li|h[1-6]|blockquote|table|thead|tbody|tfoot|tr|td|th|hr|figure|figcaption';
+	$ws    = '[ \t]*\n?[ \t]*';
 	$text  = preg_replace(
-		array( '#<!--.*?-->#s', '#\s*(</?(?:' . $block . ')(?=[\s/>])[^>]*>)\s*#i', '#\s*(<pre(?=[\s>])[^>]*>)|(</pre>)\s*#i' ),
+		array( '#<!--.*?-->#s', '#' . $ws . '(</?(?:' . $block . ')(?=[\s/>])[^>]*>)' . $ws . '#i', '#' . $ws . '(<pre(?=[\s>])[^>]*>)|(</pre>)' . $ws . '#i' ),
 		array( '', '$1', '$1$2' ),
 		str_replace( "\r\n", "\n", (string) $html )
 	);
@@ -741,7 +743,7 @@ function slim_snippets_html_to_text( $html ) {
 	// Line breaks for blocks. "</li>" goes first so a nested list's "\n" and
 	// the next "<li>" merge into one line break.
 	$text = preg_replace(
-		array( '#\s*<br\s*/?>\n?#i', '#</li>#i', '#<tr(?=[\s/>])[^>]*>|</(?:ul|ol)>#i', '#\n?<li(?=[\s/>])[^>]*>#i', '#</t[dh]>#i', '#</?(?:p|div|h[1-6]|blockquote|pre|table|hr|figure)(?=[\s/>])[^>]*>#i' ),
+		array( '#[ \t]*<br\s*/?>\n?#i', '#</li>#i', '#<tr(?=[\s/>])[^>]*>|</(?:ul|ol)>#i', '#\n?<li(?=[\s/>])[^>]*>#i', '#</t[dh]>#i', '#</?(?:p|div|h[1-6]|blockquote|pre|table|hr|figure)(?=[\s/>])[^>]*>#i' ),
 		array( "\n", '', "\n", "\n- ", ' ', "\n\n" ),
 		$text
 	);
@@ -750,7 +752,8 @@ function slim_snippets_html_to_text( $html ) {
 	$text = preg_replace( '#</?(?:a|abbr|b|blockquote|cite|code|del|div|em|figcaption|figure|font|h[1-6]|hr|i|img|ins|kbd|li|mark|ol|p|pre|q|s|small|span|strong|sub|sup|table|tbody|td|tfoot|th|thead|tr|u|ul)(?=[\s/>])[^>]*>#i', '', $text );
 	$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 	$text = str_replace( "\xC2\xA0", ' ', $text ); // Non-breaking spaces from &nbsp;.
-	$text = preg_replace( array( '/[ \t]+\n/', "/\n{3,}/" ), array( "\n", "\n\n" ), $text );
+	// "<li><p>a</p>" puts the item text on the line after its "- ": join them.
+	$text = preg_replace( array( '/^- \n+/m', '/[ \t]+\n/', "/\n{3,}/" ), array( '- ', "\n", "\n\n" ), $text );
 	return trim( $text );
 }
 

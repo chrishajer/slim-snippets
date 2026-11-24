@@ -49,7 +49,7 @@ Only administrators can manage snippets. On multisite, only super admins can, be
 
 Every snippet is imported inactive, even if it was active in the export, so nothing runs until you activate it. Activating runs the usual checks. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and counted in the notice.
 
-Code Snippets stores descriptions as HTML. On import they become plain text: paragraphs and line breaks are kept, list items become "- " lines, and links keep their URL in parentheses.
+Code Snippets stores descriptions as HTML. On import they become plain text: paragraphs and line breaks are kept, list items become "- " lines, and links keep their URL in parentheses. The conversion is one way: if you export snippets back to Code Snippets, their descriptions stay plain text.
 
 = A snippet broke my site. What now? =
 
@@ -90,6 +90,7 @@ Thank you to the Code Snippets authors.
 * Code Snippets descriptions are converted from HTML to plain text on import. Paragraphs, lists and preformatted text keep their layout, and link URLs are kept in parentheses.
 * Fixed the edit screen escaping the code and description twice. The description showed entities such as &lt;, and with the visual editor turned off, saving could write entities into the code.
 * Descriptions are saved as typed. Where WordPress filters HTML (DISALLOW_UNFILTERED_HTML, or WP-CLI without --user), text such as "option_<key>" was deleted.
+* Revisions keep the code and description exactly as saved, so restoring a revision no longer brings back filtered text.
 
 = 1.0.1 =
 * Imported snippets are always inactive, even if they were active in the export.

@@ -434,8 +434,9 @@ function slim_snippets_rebuild() {
 add_filter( 'wp_insert_post_data', 'slim_snippets_insert_data', 10, 3 );
 
 /**
- * Applies to every write (edit screen, WP-CLI, import): keep the code exactly
- * as written, pin the created date, and never publish PHP that does not parse.
+ * Applies to every write (edit screen, WP-CLI, import, revisions): keep the
+ * code and description exactly as written, pin the created date, and never
+ * publish PHP that does not parse.
  *
  * @param array $data        Slashed post data about to be saved.
  * @param array $postarr     Sanitized post array.
@@ -443,7 +444,12 @@ add_filter( 'wp_insert_post_data', 'slim_snippets_insert_data', 10, 3 );
  * @return array
  */
 function slim_snippets_insert_data( $data, $postarr, $unsanitized ) {
-	if ( 'slim_snippet' !== $data['post_type'] ) {
+	global $wpdb;
+
+	// Revisions are copies of a snippet, so they keep the raw code and
+	// description too. Restoring one must not bring back filtered text.
+	$revision = 'revision' === $data['post_type'] && 'slim_snippet' === get_post_type( $data['post_parent'] );
+	if ( 'slim_snippet' !== $data['post_type'] && ! $revision ) {
 		return $data;
 	}
 
@@ -459,8 +465,14 @@ function slim_snippets_insert_data( $data, $postarr, $unsanitized ) {
 	// The description is plain text and is escaped wherever it is shown. Keep
 	// it as typed, so kses (DISALLOW_UNFILTERED_HTML, WP-CLI without --user)
 	// cannot delete text like "option_<key>".
+	// Like core, emoji become entities where the column is utf8mb3.
 	if ( isset( $unsanitized['post_excerpt'] ) ) {
-		$data['post_excerpt'] = $unsanitized['post_excerpt'];
+		$desc                 = $unsanitized['post_excerpt'];
+		$data['post_excerpt'] = 'utf8' === $wpdb->get_col_charset( $wpdb->posts, 'post_excerpt' ) ? wp_encode_emoji( $desc ) : $desc;
+	}
+
+	if ( $revision ) {
+		return $data;
 	}
 
 	// New snippets default to priority 10, like Code Snippets.
