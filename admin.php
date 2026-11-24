@@ -105,7 +105,7 @@ function slim_snippets_admin_notices() {
 	if ( defined( 'CODE_SNIPPETS_FILE' ) && $screen && current_user_can( slim_snippets_cap() ) && ( 'plugins' === $screen->id || ( slim_snippets_is_screen() && false === strpos( $screen->id, 'slim-snippets-import' ) ) ) ) {
 		printf(
 			'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>',
-			esc_html__( 'Code Snippets is active. Slim Snippets can copy its snippets and deactivate it in one step.', 'slim-snippets' ),
+			esc_html__( 'Code Snippets is active. Slim Snippets can copy its snippets and deactivate Code Snippets in one step.', 'slim-snippets' ),
 			esc_url( admin_url( 'edit.php?post_type=slim_snippet&page=slim-snippets-import#migrate' ) ),
 			esc_html__( 'Review and migrate', 'slim-snippets' )
 		);
