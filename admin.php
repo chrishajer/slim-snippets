@@ -102,7 +102,7 @@ function slim_snippets_admin_notices() {
 
 	// While Code Snippets is active, point to the migration (not on the page that has it).
 	$screen = get_current_screen();
-	if ( defined( 'CODE_SNIPPETS_FILE' ) && $screen && current_user_can( slim_snippets_cap() ) && ( 'plugins' === $screen->id || ( slim_snippets_is_screen() && false === strpos( $screen->id, 'slim-snippets-import' ) ) ) ) {
+	if ( defined( 'CODE_SNIPPETS_FILE' ) && $screen && current_user_can( slim_snippets_cap() ) && current_user_can( 'activate_plugins' ) && ( 'plugins' === $screen->id || ( slim_snippets_is_screen() && false === strpos( $screen->id, 'slim-snippets-import' ) ) ) ) {
 		printf(
 			'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>',
 			esc_html__( 'Code Snippets is active. Slim Snippets can copy its snippets and deactivate Code Snippets in one step.', 'slim-snippets' ),
@@ -962,7 +962,8 @@ function slim_snippets_import_page() {
 		<h1><?php esc_html_e( 'Import / Export Snippets', 'slim-snippets' ); ?></h1>
 
 		<?php
-		if ( defined( 'CODE_SNIPPETS_FILE' ) ) {
+		// Migrating deactivates a plugin, so only users who may do that see it.
+		if ( defined( 'CODE_SNIPPETS_FILE' ) && current_user_can( 'activate_plugins' ) ) {
 			slim_snippets_cs_section();
 		}
 		?>
@@ -1062,7 +1063,8 @@ add_action(
 function slim_snippets_cs_plan( $rows = null ) {
 	global $wpdb;
 	if ( null === $rows ) {
-		if ( ! defined( 'CODE_SNIPPETS_FILE' ) ) {
+		$table = $wpdb->prefix . 'snippets';
+		if ( ! defined( 'CODE_SNIPPETS_FILE' ) || $table !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Checks Code Snippets' own table exists.
 			return array();
 		}
 		$rows = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}snippets ORDER BY priority, id", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Code Snippets' own table, no input.
@@ -1332,7 +1334,7 @@ add_action(
 			/* translators: %s: for example "115 in the Code Snippets Trash, 2 listed below" */
 			. ( $not ? ' ' . sprintf( __( 'Not migrated: %s.', 'slim-snippets' ), implode( ', ', $not ) ) : '' )
 			. ( is_plugin_active( $file ) ? '' : ' ' . __( 'The Code Snippets plugin is deactivated.', 'slim-snippets' ) ),
-			implode( "\n", $notes )
+			implode( "\n", array_filter( $notes ) )
 		);
 		wp_safe_redirect( $back );
 		exit;
