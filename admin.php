@@ -1010,15 +1010,34 @@ function slim_snippets_import_page() {
 			<p><input type="file" id="slim-snippets-files" name="slim_snippets_files[]" accept=".json,application/json" multiple required></p>
 			<fieldset>
 				<legend><strong><?php esc_html_e( 'Status after import', 'slim-snippets' ); ?></strong></legend>
+				<?php
+				// While Code Snippets is active it runs the originals, so the import
+				// handler activates nothing. Offer only the choice that will happen.
+				$cs_active = defined( 'CODE_SNIPPETS_FILE' );
+				if ( $cs_active ) :
+					?>
+					<div class="notice notice-warning inline"><p>
+						<?php
+						echo wp_kses_post(
+							sprintf(
+								/* translators: 1: link to the Plugins screen, 2: link to the Migrate from Code Snippets section */
+								__( 'The Code Snippets plugin is active, so snippets can only be imported inactive. To keep their status or activate them, deactivate Code Snippets on the %1$s first, or use %2$s at the top of this page.', 'slim-snippets' ),
+								'<a href="' . esc_url( admin_url( 'plugins.php' ) ) . '">' . esc_html__( 'Plugins screen', 'slim-snippets' ) . '</a>',
+								'<a href="#migrate">' . esc_html__( 'Migrate from Code Snippets', 'slim-snippets' ) . '</a>'
+							)
+						);
+						?>
+					</p></div>
+				<?php endif; ?>
 				<p><label><input type="radio" name="slim_snippets_status" value="inactive" checked> <?php esc_html_e( 'Inactive: import every snippet inactive, so nothing runs until you activate it', 'slim-snippets' ); ?></label></p>
-				<p><label><input type="radio" name="slim_snippets_status" value="keep"> <?php esc_html_e( 'Keep the status from the file: activate the active snippets, keep the inactive ones inactive, and put trashed snippets in the Trash', 'slim-snippets' ); ?></label></p>
-				<p><label><input type="radio" name="slim_snippets_status" value="active"> <?php esc_html_e( 'Active: activate every snippet', 'slim-snippets' ); ?></label></p>
+				<p><label<?php echo $cs_active ? ' style="color:#8c8f94"' : ''; ?>><input type="radio" name="slim_snippets_status" value="keep"<?php disabled( $cs_active ); ?>> <?php esc_html_e( 'Keep the status from the file: activate the active snippets, keep the inactive ones inactive, and put trashed snippets in the Trash', 'slim-snippets' ); ?></label></p>
+				<p><label<?php echo $cs_active ? ' style="color:#8c8f94"' : ''; ?>><input type="radio" name="slim_snippets_status" value="active"<?php disabled( $cs_active ); ?>> <?php esc_html_e( 'Active: activate every snippet', 'slim-snippets' ); ?></label></p>
 			</fieldset>
 			<ul class="ul-disc">
 				<li><?php esc_html_e( 'Activating runs the usual checks. A snippet with an error, or one that declares a function or class that already exists, stays inactive and is listed in the notice.', 'slim-snippets' ); ?></li>
 				<li><?php esc_html_e( 'Run-once snippets are always imported inactive, so an import never runs them.', 'slim-snippets' ); ?></li>
 				<li><?php esc_html_e( 'Trashed snippets are not imported unless you keep the status from the file.', 'slim-snippets' ); ?></li>
-				<li><strong><?php esc_html_e( 'Migrating from Code Snippets?', 'slim-snippets' ); ?></strong> <?php esc_html_e( 'If the Code Snippets plugin is active on this site, use Migrate from Code Snippets at the top of this page. To import an export file instead, deactivate Code Snippets first. While Code Snippets is active, every imported snippet is left inactive, because Code Snippets is still running the originals.', 'slim-snippets' ); ?></li>
+				<li><strong><?php esc_html_e( 'Migrating from Code Snippets?', 'slim-snippets' ); ?></strong> <?php esc_html_e( 'If the Code Snippets plugin is active on this site, use Migrate from Code Snippets at the top of this page.', 'slim-snippets' ); ?></li>
 			</ul>
 			<?php submit_button( __( 'Import', 'slim-snippets' ) ); ?>
 		</form>
