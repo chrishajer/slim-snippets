@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,7 +85,7 @@ Yes. Snippets are posts of type `slim_snippet`:
 
 `wp post create code.php --post_type=slim_snippet --post_title="My snippet" --post_excerpt="What it does" --meta_input='{"_slim_snippets_scope":"global"}'`
 
-That creates an inactive snippet. Activate it on the Snippets screen so it is checked first. Publishing from WP-CLI (`--post_status=publish`) only runs the syntax check.
+That creates an inactive snippet, even with `--post_status=publish`, and `wp post update` makes an active snippet inactive. Activate snippets on the Snippets screen so they are checked first.
 
 = What happens to my snippets if I delete the plugin? =
 
@@ -106,8 +106,10 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.2.1 | 2026-11-25 =
-* Updated `readme.txt` and `README.md` for clarity and consistency.
-* Updated the changelog so each entry starts with Added, Updated, Fixed or Removed, and each release shows its date.
+= 1.2.2 | 2026-11-25 =
+* Updated the plugin description to mention migrating from the Code Snippets plugin.
+* Updated the Safe mode description: the URL parameter works only for users who can manage snippets.
+* Fixed snippets becoming active without the activation checks when published another way (the WordPress importer, a revision restore, WP-CLI or another plugin). They are now saved inactive.
+* Removed snippets from Tools > Export. Use Snippets > Import / Export instead.
 
 Older versions are listed in `changelog.txt`.
