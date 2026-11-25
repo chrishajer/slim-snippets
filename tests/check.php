@@ -362,4 +362,39 @@ $check(
 	'migration copies checked for redeclaring: ' . wp_json_encode( $errors )
 );
 
+// 22. Updater: the latest release and its zip are offered (also when not newer,
+// so WordPress shows the auto-updates toggle); another plugin's github.com
+// update, a zip from anywhere else and a failed request are ignored.
+$slim_github = null;
+$mock        = function ( $pre, $args, $url ) use ( &$slim_github ) {
+	return false === strpos( $url, 'api.github.com/repos/chrishajer/slim-snippets/releases/latest' ) ? $pre : $slim_github;
+};
+$release     = function ( $zip ) {
+	$body = array(
+		'tag_name'  => 'v9.0.0',
+		'body_html' => '<p>notes</p>',
+		'assets'    => array( array( 'name' => 'slim-snippets.zip', 'browser_download_url' => $zip ) ),
+	);
+	return array( 'response' => array( 'code' => 200, 'message' => 'OK' ), 'body' => wp_json_encode( $body ), 'headers' => array(), 'cookies' => array() );
+};
+add_filter( 'pre_http_request', $mock, 10, 3 );
+$mine        = plugin_basename( SLIM_SNIPPETS_FILE );
+$zip         = 'https://github.com/chrishajer/slim-snippets/releases/download/v9.0.0/slim-snippets.zip';
+$slim_github = $release( $zip );
+$up          = apply_filters( 'update_plugins_github.com', false, array(), $mine, array() );
+$info        = slim_snippets_update_details( false, 'plugin_information', (object) array( 'slug' => 'slim-snippets' ) );
+$other       = slim_snippets_update_check( false, array(), 'other/other.php' );
+$slim_github = $release( 'https://example.com/slim-snippets.zip' );
+$foreign     = slim_snippets_update_check( false, array(), $mine );
+$slim_github = new WP_Error( 'http_request_failed', 'down' );
+$down        = slim_snippets_update_check( false, array(), $mine );
+$down_info   = slim_snippets_update_details( false, 'plugin_information', (object) array( 'slug' => 'slim-snippets' ) );
+remove_filter( 'pre_http_request', $mock, 10 );
+$check(
+	is_array( $up ) && '9.0.0' === $up['version'] && $zip === $up['package']
+	&& '9.0.0' === $info->version && '<p>notes</p>' === $info->sections['changelog']
+	&& false === $other && false === $foreign && false === $down && is_wp_error( $down_info ),
+	'updater: ' . wp_json_encode( array( $up, $other, $foreign, $down ) )
+);
+
 echo $slim_fail ? "\n$slim_fail FAILED\n" : "\nALL PASSED\n";
