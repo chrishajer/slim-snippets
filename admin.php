@@ -914,7 +914,7 @@ function slim_snippets_import_snippet( $snippet, $from_code_snippets = false, $k
  * @return array{0: array<string, int>, 1: string[]} Counts and notes.
  */
 function slim_snippets_import_files( $files, $status ) {
-	$counts = array_fill_keys( array( 'active', 'inactive', 'trash', 'skipped' ), 0 );
+	$counts = array_fill_keys( array( 'active', 'inactive', 'failed', 'trash', 'skipped' ), 0 );
 	$notes  = array();
 	$queue  = array();
 	foreach ( $files as list( $file, $data ) ) {
@@ -954,7 +954,7 @@ function slim_snippets_import_files( $files, $status ) {
 		if ( 'ok' === $state ) {
 			++$counts['active'];
 		} else {
-			++$counts['inactive'];
+			++$counts['failed']; // Imported, but left inactive.
 			/* translators: 1: snippet name, 2: error message */
 			$notes[] = sprintf( __( '"%1$s" left inactive: %2$s', 'slim-snippets' ), get_the_title( $id ), $text );
 		}
@@ -1053,13 +1053,17 @@ add_action(
 		}
 
 		list( $counts, $notes ) = slim_snippets_import_files( $files, $status );
-		$total                  = $counts['active'] + $counts['inactive'] + $counts['trash'];
+		$total                  = $counts['active'] + $counts['inactive'] + $counts['failed'] + $counts['trash'];
 		$items                  = array(
 			/* translators: %d: number of snippets */
 			sprintf( _n( '%d active', '%d active', $counts['active'], 'slim-snippets' ), $counts['active'] ),
 			/* translators: %d: number of snippets */
 			sprintf( _n( '%d inactive', '%d inactive', $counts['inactive'], 'slim-snippets' ), $counts['inactive'] ),
 		);
+		if ( $counts['failed'] ) {
+			/* translators: %d: number of snippets */
+			$items[] = sprintf( _n( '%d left inactive because of an error, listed below', '%d left inactive because of an error, listed below', $counts['failed'], 'slim-snippets' ), $counts['failed'] );
+		}
 		if ( $counts['trash'] ) {
 			/* translators: %d: number of snippets */
 			$items[] = sprintf( _n( '%d in the Trash', '%d in the Trash', $counts['trash'], 'slim-snippets' ), $counts['trash'] );
@@ -1402,7 +1406,7 @@ add_action(
 			exit;
 		}
 
-		$counts = array_fill_keys( array( 'active', 'inactive', 'trash', 'skipped', 'unselected' ), 0 );
+		$counts = array_fill_keys( array( 'active', 'inactive', 'failed', 'trash', 'skipped', 'unselected' ), 0 );
 		$notes  = array();
 		$queue  = array();
 		foreach ( slim_snippets_cs_plan() as $item ) {
@@ -1440,7 +1444,7 @@ add_action(
 		$errors = slim_snippets_cs_check( $queue );
 		foreach ( array_filter( $errors ) as $id => $error ) {
 			update_post_meta( $id, '_slim_snippets_error', $error );
-			++$counts['inactive'];
+			++$counts['failed']; // Copied, but left inactive.
 			/* translators: 1: snippet name, 2: error message */
 			$notes[] = sprintf( __( '"%1$s" left inactive: %2$s', 'slim-snippets' ), get_the_title( $id ), $error );
 		}
@@ -1455,13 +1459,17 @@ add_action(
 		}
 		slim_snippets_rebuild();
 
-		$total = $counts['active'] + $counts['inactive'];
+		$total = $counts['active'] + $counts['inactive'] + $counts['failed'];
 		$items = array(
 			/* translators: %d: number of snippets */
 			sprintf( _n( '%d active', '%d active', $counts['active'], 'slim-snippets' ), $counts['active'] ),
 			/* translators: %d: number of snippets */
 			sprintf( _n( '%d inactive', '%d inactive', $counts['inactive'], 'slim-snippets' ), $counts['inactive'] ),
 		);
+		if ( $counts['failed'] ) {
+			/* translators: %d: number of snippets */
+			$items[] = sprintf( _n( '%d left inactive because of an error, listed below', '%d left inactive because of an error, listed below', $counts['failed'], 'slim-snippets' ), $counts['failed'] );
+		}
 		if ( $counts['trash'] ) {
 			/* translators: %d: number of snippets */
 			$items[] = sprintf( _n( '%d not migrated because it is in the Code Snippets Trash', '%d not migrated because they are in the Code Snippets Trash', $counts['trash'], 'slim-snippets' ), $counts['trash'] );

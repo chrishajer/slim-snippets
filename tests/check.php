@@ -262,10 +262,11 @@ $file = array(
 		array( 'name' => 'imp broken', 'code' => 'this is not php', 'active' => true ),
 	),
 );
+// Counts: active, inactive, left inactive by an error, in the Trash, skipped.
 $want = array(
-	'inactive' => array( 0, 4, 0, 1 ),
-	'keep'     => array( 1, 3, 1, 0 ),
-	'active'   => array( 2, 2, 0, 1 ),
+	'inactive' => array( 0, 4, 0, 0, 1 ),
+	'keep'     => array( 1, 2, 1, 1, 0 ),
+	'active'   => array( 2, 1, 1, 0, 1 ),
 );
 foreach ( $want as $mode => $expect ) {
 	$before = $latest();
@@ -277,7 +278,7 @@ foreach ( $want as $mode => $expect ) {
 			$slim_made[] = $new_id;
 		}
 	}
-	$got    = array( $counts['active'], $counts['inactive'], $counts['trash'], $counts['skipped'] - 1 );
+	$got    = array( $counts['active'], $counts['inactive'], $counts['failed'], $counts['trash'], $counts['skipped'] - 1 );
 	$broken = 'inactive' !== $mode && preg_grep( '/^"imp broken" left inactive: /', $notes );
 	$check(
 		$expect === $got && '' === $out && ( 'inactive' === $mode || $broken ) && in_array( '"other.json" is not a snippets export.', $notes, true ),
