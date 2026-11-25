@@ -3,7 +3,7 @@
  * Plugin Name:       Slim Snippets
  * Plugin URI:        https://github.com/chrishajer/slim-snippets
  * Description:       Run PHP, CSS and JavaScript snippets without editing functions.php. Migrate from the Code Snippets plugin or import its exports.
- * Version:           1.2.4
+ * Version:           1.2.5
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Chris Hajer
@@ -22,7 +22,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SLIM_SNIPPETS_VERSION', '1.2.4' );
+define( 'SLIM_SNIPPETS_VERSION', '1.2.5' );
 define( 'SLIM_SNIPPETS_FILE', __FILE__ );
 
 /**
@@ -400,13 +400,23 @@ function slim_snippets_redeclared( $code, $id = 0 ) {
 	}
 	// While Code Snippets is active it runs its own active snippets too, its
 	// front-end ones only on the front end, so a clash would not show here and
-	// would take the site down there.
+	// would take the site down there. On multisite it also runs the network
+	// snippets that are active on every site, and the shared ones this site
+	// activated (Code Snippets' DB::is_network_snippet_enabled()).
 	if ( defined( 'CODE_SNIPPETS_FILE' ) ) {
+		$codes = array();
 		$table = $wpdb->prefix . 'snippets';
-		if ( $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Code Snippets' own table.
-			foreach ( $wpdb->get_col( "SELECT code FROM {$table} WHERE active = 1 AND scope IN ( 'global', 'admin', 'front-end' )" ) as $other ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Code Snippets' own table, no input.
-				$taken += slim_snippets_declarations( $other );
-			}
+		if ( slim_snippets_table_exists( $table ) ) {
+			$codes = $wpdb->get_col( "SELECT code FROM {$table} WHERE active = 1 AND scope IN ( 'global', 'admin', 'front-end' )" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Code Snippets' own table, no input.
+		}
+		$table = $wpdb->base_prefix . 'ms_snippets';
+		if ( is_multisite() && slim_snippets_table_exists( $table ) ) {
+			$shared = array_map( 'intval', (array) get_option( 'active_shared_network_snippets', array() ) );
+			$shared = implode( ',', array_merge( array( 0 ), $shared ) );
+			$codes  = array_merge( $codes, $wpdb->get_col( "SELECT code FROM {$table} WHERE scope IN ( 'global', 'admin', 'front-end' ) AND ( active = 1 OR ( active <> -1 AND id IN ( {$shared} ) ) )" ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Code Snippets' own table; the IDs are integers.
+		}
+		foreach ( $codes as $other ) {
+			$taken += slim_snippets_declarations( $other );
 		}
 	}
 	foreach ( slim_snippets_declarations( $code ) as $key => $label ) {
@@ -418,6 +428,18 @@ function slim_snippets_redeclared( $code, $id = 0 ) {
 		}
 	}
 	return '';
+}
+
+/**
+ * Whether a database table exists. Used for Code Snippets' tables, which are
+ * there only if Code Snippets was ever activated.
+ *
+ * @param string $table Full table name.
+ * @return bool
+ */
+function slim_snippets_table_exists( $table ) {
+	global $wpdb;
+	return $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Schema check, nothing to cache.
 }
 
 /**
