@@ -1088,8 +1088,10 @@ add_action(
  *                 (why it is skipped, or ''), 'existing' (ID of the inactive
  *                 Slim Snippets copy to activate instead of copying again, or 0),
  *                 'id' (the snippet's ID in Code Snippets), 'review' (true
- *                 when the snippet is not migrated and its code would be lost
- *                 from view once Code Snippets is deactivated) and 'free_asset'
+ *                 when the snippet is not migrated because it is trashed, its
+ *                 scope is not supported or it uses a condition, so its code
+ *                 would be lost from view once Code Snippets is deactivated)
+ *                 and 'free_asset'
  *                 (true when it is an active CSS or JavaScript snippet that the
  *                 free Code Snippets plugin never ran, so it is copied inactive).
  *
@@ -1139,7 +1141,8 @@ function slim_snippets_cs_plan( $rows = null, $pro = null ) {
 		$existing = 0;
 		$review   = false;
 		if ( 'trash' === $status ) {
-			$note = __( 'in the Code Snippets Trash', 'slim-snippets' );
+			$note   = __( 'in the Code Snippets Trash', 'slim-snippets' );
+			$review = true;
 		} elseif ( ! array_key_exists( $row['scope'], slim_snippets_scopes() ) ) {
 			/* translators: %s: Code Snippets scope name */
 			$note   = sprintf( __( 'scope "%s" is not supported', 'slim-snippets' ), $row['scope'] );
@@ -1287,9 +1290,6 @@ function slim_snippets_cs_section() {
 				echo esc_html( sprintf( __( '%1$s (%2$d)', 'slim-snippets' ), $heading, count( $items ) ) );
 				?>
 			</h3>
-			<?php if ( ! $pick ) : ?>
-				<p><?php esc_html_e( 'Trashed snippets are not migrated.', 'slim-snippets' ); ?></p>
-			<?php endif; ?>
 			<table class="wp-list-table widefat striped" style="max-width:1000px">
 				<thead>
 					<tr>
@@ -1305,9 +1305,7 @@ function slim_snippets_cs_section() {
 						<?php endif; ?>
 						<th scope="col"><?php esc_html_e( 'Snippet', 'slim-snippets' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Scope', 'slim-snippets' ); ?></th>
-						<?php if ( $pick ) : ?>
-							<th scope="col"><?php esc_html_e( 'After migrating', 'slim-snippets' ); ?></th>
-						<?php endif; ?>
+						<th scope="col"><?php esc_html_e( 'After migrating', 'slim-snippets' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -1331,33 +1329,35 @@ function slim_snippets_cs_section() {
 							<?php endif; ?>
 							<td><?php echo esc_html( $name ); ?></td>
 							<td><?php echo esc_html( isset( $scopes[ $item['snippet']['scope'] ] ) ? $scopes[ $item['snippet']['scope'] ] : $item['snippet']['scope'] ); ?></td>
-							<?php if ( $pick ) : ?>
-								<td>
-									<?php
-									if ( 'skip' === $item['result'] ) {
+							<td>
+								<?php
+								if ( 'skip' === $item['result'] ) {
+									if ( 'trash' === $item['status'] ) {
+										esc_html_e( 'Not migrated', 'slim-snippets' ); // The table heading already says Trash.
+									} else {
 										/* translators: %s: reason, for example "already in Slim Snippets" */
 										echo esc_html( sprintf( __( 'Not migrated: %s', 'slim-snippets' ), $item['note'] ) );
-										// Its code is out of reach once Code Snippets is deactivated: link to it so the
-										// site owner can see what it does and how to replace it.
-										if ( $item['review'] && $item['id'] ) {
-											$edit = function_exists( 'Code_Snippets\code_snippets' ) ? \Code_Snippets\code_snippets()->get_menu_url( 'edit' ) : admin_url( 'admin.php?page=edit-snippet' );
-											printf(
-												'. <a href="%s" target="_blank" rel="noopener noreferrer">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external" style="font-size:16px;width:16px;height:16px;vertical-align:text-bottom;text-decoration:none"></span></a>',
-												esc_url( add_query_arg( 'id', $item['id'], $edit ) ),
-												esc_html__( 'view snippet', 'slim-snippets' ),
-												esc_html__( '(opens in a new tab)', 'slim-snippets' )
-											);
-										}
-									} elseif ( $item['existing'] ) {
-										esc_html_e( 'Active (activates the copy already in Slim Snippets)', 'slim-snippets' );
-									} elseif ( $item['free_asset'] ) {
-										esc_html_e( 'Inactive (CSS and JavaScript snippets do not run in the free Code Snippets plugin)', 'slim-snippets' );
-									} else {
-										echo esc_html( $labels[ $item['result'] ] );
 									}
-									?>
-								</td>
-							<?php endif; ?>
+									// Its code is out of reach once Code Snippets is deactivated: link to it so the
+									// site owner can see what it does and how to replace it.
+									if ( $item['review'] && $item['id'] ) {
+										$edit = function_exists( 'Code_Snippets\code_snippets' ) ? \Code_Snippets\code_snippets()->get_menu_url( 'edit' ) : admin_url( 'admin.php?page=edit-snippet' );
+										printf(
+											'. <a href="%s" target="_blank" rel="noopener noreferrer">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external" style="font-size:16px;width:16px;height:16px;vertical-align:text-bottom;text-decoration:none"></span></a>',
+											esc_url( add_query_arg( 'id', $item['id'], $edit ) ),
+											esc_html__( 'view snippet', 'slim-snippets' ),
+											esc_html__( '(opens in a new tab)', 'slim-snippets' )
+										);
+									}
+								} elseif ( $item['existing'] ) {
+									esc_html_e( 'Active (activates the copy already in Slim Snippets)', 'slim-snippets' );
+								} elseif ( $item['free_asset'] ) {
+									esc_html_e( 'Inactive (CSS and JavaScript snippets do not run in the free Code Snippets plugin)', 'slim-snippets' );
+								} else {
+									echo esc_html( $labels[ $item['result'] ] );
+								}
+								?>
+							</td>
 						</tr>
 					<?php endforeach; ?>
 				</tbody>

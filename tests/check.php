@@ -445,9 +445,10 @@ $check(
 	'notice items render as a bulleted list: ' . trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $notice_html ) ) )
 );
 
-// 25. Code Snippets snippets that are not migrated because of their scope or
-// a condition are flagged for review with their Code Snippets ID, so the
-// migration table can link to them. Trashed and duplicate ones are not.
+// 25. Code Snippets snippets that are not migrated because they are trashed,
+// or because of their scope or a condition, are flagged for review with their
+// Code Snippets ID, so the migration tables can link to them. Migrated ones
+// are not.
 $review_plan = slim_snippets_cs_plan(
 	array(
 		array_merge( $cs_row( 'cs html', '<p>hi</p>', 1 ), array( 'id' => 41, 'scope' => 'content' ) ),
@@ -457,7 +458,7 @@ $review_plan = slim_snippets_cs_plan(
 	)
 );
 $check(
-	array( true, true, false, false ) === array_column( $review_plan, 'review' ) && array( 41, 42, 43, 44 ) === array_column( $review_plan, 'id' ),
+	array( true, true, true, false ) === array_column( $review_plan, 'review' ) && array( 41, 42, 43, 44 ) === array_column( $review_plan, 'id' ),
 	'not-migrated snippets flagged for review: ' . wp_json_encode( array_column( $review_plan, 'review' ) )
 );
 
