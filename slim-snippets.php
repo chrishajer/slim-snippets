@@ -415,7 +415,7 @@ function slim_snippets_redeclared( $code ) {
 function slim_snippets_activate( $id ) {
 	$post = get_post( $id );
 	if ( ! $post || 'slim_snippet' !== $post->post_type || 'trash' === $post->post_status ) {
-		return array( 'error', 'Snippet not found.' );
+		return array( 'error', __( 'Snippet not found.', 'slim-snippets' ) );
 	}
 	if ( 'publish' === $post->post_status ) {
 		return array( 'ok', '' );

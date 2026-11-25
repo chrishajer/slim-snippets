@@ -270,7 +270,7 @@ $want = array(
 foreach ( $want as $mode => $expect ) {
 	$before = $latest();
 	ob_start();
-	list( $counts, $notes ) = slim_snippets_import_files( array( $file, array( 'nope' => 1 ) ), $mode );
+	list( $counts, $notes ) = slim_snippets_import_files( array( array( 'snippets.json', $file ), array( 'other.json', array( 'nope' => 1 ) ) ), $mode );
 	$out = ob_get_clean();
 	foreach ( get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => array( 'publish', 'draft', 'trash' ), 'numberposts' => -1, 'fields' => 'ids' ) ) as $new_id ) {
 		if ( $new_id > $before ) {
@@ -280,7 +280,7 @@ foreach ( $want as $mode => $expect ) {
 	$got    = array( $counts['active'], $counts['inactive'], $counts['trash'], $counts['skipped'] - 1 );
 	$broken = 'inactive' !== $mode && preg_grep( '/^"imp broken" left inactive: /', $notes );
 	$check(
-		$expect === $got && '' === $out && ( 'inactive' === $mode || $broken ) && in_array( 'A file is not a snippets export.', $notes, true ),
+		$expect === $got && '' === $out && ( 'inactive' === $mode || $broken ) && in_array( '"other.json" is not a snippets export.', $notes, true ),
 		"import status '$mode': " . wp_json_encode( $got ) . ' ' . wp_json_encode( $notes )
 	);
 }

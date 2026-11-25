@@ -94,9 +94,13 @@ add_action( 'admin_notices', 'slim_snippets_admin_notices' );
  */
 function slim_snippets_admin_notices() {
 	if ( slim_snippets_safe_mode() && current_user_can( slim_snippets_cap() ) ) {
+		$off = defined( 'SLIM_SNIPPETS_SAFE_MODE' ) && SLIM_SNIPPETS_SAFE_MODE
+			? esc_html__( 'Remove SLIM_SNIPPETS_SAFE_MODE from wp-config.php to turn it off.', 'slim-snippets' )
+			: sprintf( '<a href="%s">%s</a>', esc_url( remove_query_arg( 'slim-snippets-safe-mode' ) ), esc_html__( 'Turn off safe mode', 'slim-snippets' ) );
 		printf(
-			'<div class="notice notice-warning"><p>%s</p></div>',
-			esc_html__( 'Slim Snippets safe mode is on: snippets are not running.', 'slim-snippets' )
+			'<div class="notice notice-warning"><p>%s %s</p></div>',
+			esc_html__( 'Slim Snippets safe mode is on: snippets are not running.', 'slim-snippets' ),
+			$off // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
 		);
 	}
 
@@ -846,7 +850,7 @@ function slim_snippets_import_snippet( $snippet, $from_code_snippets = false, $k
 	$name  = sanitize_text_field( isset( $snippet['name'] ) ? $snippet['name'] : '' );
 	if ( ! empty( $snippet['trashed'] ) && ! $keep_trash ) {
 		/* translators: %s: snippet name */
-		return array( 'skipped', sprintf( __( '"%s": in the Trash in the export', 'slim-snippets' ), $name ), 0 );
+		return array( 'skipped', sprintf( __( '"%s": in the Trash when it was exported', 'slim-snippets' ), $name ), 0 );
 	}
 	if ( ! array_key_exists( $scope, slim_snippets_scopes() ) ) {
 		/* translators: 1: snippet name, 2: scope name from the export file */
@@ -887,7 +891,7 @@ function slim_snippets_import_snippet( $snippet, $from_code_snippets = false, $k
 /**
  * Import the snippets of decoded export files and set their status.
  *
- * @param array  $files  Decoded export files.
+ * @param array  $files  Uploaded files, each array( file name, decoded JSON ).
  * @param string $status 'inactive' (every snippet inactive), 'keep' (the
  *                       status in the file, including the Trash) or 'active'
  *                       (activate every snippet).
@@ -897,17 +901,19 @@ function slim_snippets_import_files( $files, $status ) {
 	$counts = array_fill_keys( array( 'active', 'inactive', 'trash', 'skipped' ), 0 );
 	$notes  = array();
 	$queue  = array();
-	foreach ( $files as $data ) {
+	foreach ( $files as list( $file, $data ) ) {
 		if ( ! isset( $data['snippets'] ) || ! is_array( $data['snippets'] ) ) {
 			++$counts['skipped'];
-			$notes[] = __( 'A file is not a snippets export.', 'slim-snippets' );
+			/* translators: %s: file name */
+			$notes[] = sprintf( __( '"%s" is not a snippets export.', 'slim-snippets' ), $file );
 			continue;
 		}
 		$from_cs = isset( $data['generator'] ) && 0 === strpos( (string) $data['generator'], 'Code Snippets' );
 		foreach ( $data['snippets'] as $snippet ) {
 			if ( ! is_array( $snippet ) ) {
 				++$counts['skipped'];
-				$notes[] = __( 'A snippet in a file is not valid.', 'slim-snippets' );
+				/* translators: %s: file name */
+				$notes[] = sprintf( __( '"%s" has a snippet that is not valid.', 'slim-snippets' ), $file );
 				continue;
 			}
 			list( $state, $note, $id ) = slim_snippets_import_snippet( $snippet, $from_cs, 'keep' === $status );
@@ -1020,10 +1026,13 @@ add_action(
 		$status = isset( $_POST['slim_snippets_status'] ) ? sanitize_key( wp_unslash( $_POST['slim_snippets_status'] ) ) : '';
 		$status = in_array( $status, array( 'keep', 'active' ), true ) ? $status : 'inactive';
 		$files  = array();
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Only tmp_name is used, checked with is_uploaded_file().
-		foreach ( isset( $_FILES['slim_snippets_files']['tmp_name'] ) ? (array) $_FILES['slim_snippets_files']['tmp_name'] : array() as $tmp ) {
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput -- tmp_name is checked with is_uploaded_file(); the name is only shown, escaped, in the notice.
+		$names = isset( $_FILES['slim_snippets_files']['name'] ) ? (array) $_FILES['slim_snippets_files']['name'] : array();
+		foreach ( isset( $_FILES['slim_snippets_files']['tmp_name'] ) ? (array) $_FILES['slim_snippets_files']['tmp_name'] : array() as $i => $tmp ) {
+			// phpcs:enable
 			if ( is_uploaded_file( $tmp ) ) {
-				$files[] = json_decode( (string) file_get_contents( $tmp ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local uploaded file.
+				$name    = isset( $names[ $i ] ) ? sanitize_text_field( $names[ $i ] ) : '';
+				$files[] = array( $name, json_decode( (string) file_get_contents( $tmp ), true ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local uploaded file.
 			}
 		}
 
@@ -1107,7 +1116,7 @@ function slim_snippets_cs_plan( $rows = null ) {
 		} elseif ( ! empty( $row['condition_id'] ) ) {
 			$note = __( 'uses a Code Snippets condition, which is not supported', 'slim-snippets' );
 		} elseif ( is_int( $dup ) ) {
-			$note = __( 'same as another Code Snippets snippet', 'slim-snippets' );
+			$note = __( 'duplicate of a Code Snippets snippet listed above', 'slim-snippets' );
 			if ( $active && 'single-use' !== $plan[ $dup ]['snippet']['scope'] ) {
 				$plan[ $dup ]['result'] = 'active';
 			}
@@ -1226,7 +1235,7 @@ function slim_snippets_cs_section() {
 							/* translators: %s: reason, for example "already in Slim Snippets" */
 							echo esc_html( sprintf( __( 'Not migrated: %s', 'slim-snippets' ), $item['note'] ) );
 						} elseif ( $item['existing'] ) {
-							esc_html_e( 'Active (the inactive copy already in Slim Snippets)', 'slim-snippets' );
+							esc_html_e( 'Active (activates the copy already in Slim Snippets)', 'slim-snippets' );
 						} else {
 							echo esc_html( $labels[ $item['result'] ] );
 						}
