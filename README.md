@@ -18,7 +18,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 - **Search** across the name, code, description and tags.
 - **Revisions** of the code, title and description.
 - **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction. Import several files at once, and choose whether the snippets arrive inactive (the default), keep the status from the file, or are all activated.
-- **Migrate from Code Snippets** on the same site with one click: review what will be copied, then Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
+- **Migrate from Code Snippets** on the same site with one click: review and choose what will be copied, then Slim Snippets copies the selected snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
 - **Updates from GitHub.** New releases show on the Plugins and Updates screens like other plugin updates, and auto-updates can be turned on.
 
 No custom database tables. Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
@@ -35,7 +35,7 @@ If `wp-config.php` sets `DISALLOW_UNFILTERED_HTML` to true, nobody can manage sn
 
 ## Updates
 
-Slim Snippets updates from its releases on GitHub, not from WordPress.org. A new release shows on the Plugins and Updates screens like other plugin updates, and you can turn on auto-updates for it. WordPress checks every 12 hours; to check now, click Check again on Dashboard > Updates. Update checks go to api.github.com and raw.githubusercontent.com (for the release's `readme.txt`, which says which WordPress and PHP versions it works with) and do not include your site's address. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
+Slim Snippets updates from its releases on GitHub, not from WordPress.org. A new release shows on the Plugins and Updates screens like other plugin updates, and you can turn on auto-updates for it. WordPress checks every 12 hours; to check now, click Check again on Dashboard > Updates. Update checks go to api.github.com and raw.githubusercontent.com (for version requirements) and do not include your site's address. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
 
 Versions before 1.2.0 cannot update themselves. Install 1.2.0 from GitHub once, and later releases arrive as updates.
 

@@ -262,10 +262,11 @@ $file = array(
 		array( 'name' => 'imp broken', 'code' => 'this is not php', 'active' => true ),
 	),
 );
+// Counts: active, inactive, left inactive by an error, in the Trash, skipped.
 $want = array(
-	'inactive' => array( 0, 4, 0, 1 ),
-	'keep'     => array( 1, 3, 1, 0 ),
-	'active'   => array( 2, 2, 0, 1 ),
+	'inactive' => array( 0, 4, 0, 0, 1 ),
+	'keep'     => array( 1, 2, 1, 1, 0 ),
+	'active'   => array( 2, 1, 1, 0, 1 ),
 );
 foreach ( $want as $mode => $expect ) {
 	$before = $latest();
@@ -277,7 +278,7 @@ foreach ( $want as $mode => $expect ) {
 			$slim_made[] = $new_id;
 		}
 	}
-	$got    = array( $counts['active'], $counts['inactive'], $counts['trash'], $counts['skipped'] - 1 );
+	$got    = array( $counts['active'], $counts['inactive'], $counts['failed'], $counts['trash'], $counts['skipped'] - 1 );
 	$broken = 'inactive' !== $mode && preg_grep( '/^"imp broken" left inactive: /', $notes );
 	$check(
 		$expect === $got && '' === $out && ( 'inactive' === $mode || $broken ) && in_array( '"other.json" is not a snippets export.', $notes, true ),
@@ -428,6 +429,90 @@ $check(
 	&& ! $in_index( $gate_new ) && ! $in_index( $gate_future ) && ! $in_index( $gate_live )
 	&& ! get_post_type_object( 'slim_snippet' )->can_export,
 	'only activation makes a snippet active: ' . wp_json_encode( array( get_post_status( $gate_new ), get_post_status( $gate_future ), $gate_was, $gate_edited, (bool) $gate_rev, get_post_status( $gate_live ) ) )
+);
+
+// 24. A notice's items are shown as an escaped bulleted list, between the
+// message and the preformatted detail; a list-type detail (import and
+// migration notes) is a second bulleted list.
+require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+require_once ABSPATH . 'wp-admin/includes/screen.php';
+set_current_screen( 'edit-slim_snippet' );
+delete_transient( 'slim_snippets_notices_' . get_current_user_id() );
+slim_snippets_notice( 'warning', 'Migrated 3 snippets from Code Snippets:', 'note <b>', array( '2 active', '1 <inactive>' ) );
+ob_start();
+slim_snippets_admin_notices();
+$notice_html = ob_get_clean();
+slim_snippets_notice( 'warning', 'Imported 2 snippets:', array( '"a": note <i>', '"b": other' ), array( '1 active' ) );
+ob_start();
+slim_snippets_admin_notices();
+$notes_html = ob_get_clean();
+$check(
+	false !== strpos( $notice_html, '<p>Migrated 3 snippets from Code Snippets:</p><ul class="ul-disc"><li>2 active</li><li>1 &lt;inactive&gt;</li></ul><pre style="white-space:pre-wrap">note &lt;b&gt;</pre>' )
+	&& false !== strpos( $notes_html, '<p>Imported 2 snippets:</p><ul class="ul-disc"><li>1 active</li></ul><ul class="ul-disc"><li>&quot;a&quot;: note &lt;i&gt;</li><li>&quot;b&quot;: other</li></ul></div>' ),
+	'notice items and notes render as bulleted lists: ' . trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $notes_html ) ) )
+);
+
+// 25. Code Snippets snippets that are not migrated because they are trashed,
+// or because of their scope or a condition, are flagged for review with their
+// Code Snippets ID, so the migration tables can link to them. Migrated ones
+// are not.
+$review_plan = slim_snippets_cs_plan(
+	array(
+		array_merge( $cs_row( 'cs html', '<p>hi</p>', 1 ), array( 'id' => 41, 'scope' => 'content' ) ),
+		array_merge( $cs_row( 'cs cond', '// cond', 1 ), array( 'id' => 42, 'condition_id' => 7 ) ),
+		array_merge( $cs_row( 'cs gone', '// gone', -1 ), array( 'id' => 43 ) ),
+		array_merge( $cs_row( 'cs fine', '// fine', 1 ), array( 'id' => 44 ) ),
+	)
+);
+$check(
+	array( true, true, true, false ) === array_column( $review_plan, 'review' ) && array( 41, 42, 43, 44 ) === array_column( $review_plan, 'id' ),
+	'not-migrated snippets flagged for review: ' . wp_json_encode( array_column( $review_plan, 'review' ) )
+);
+
+// 26. Active CSS and JavaScript snippets are copied inactive from the free
+// Code Snippets plugin, which never ran them, and active from Pro, which did.
+$asset_rows = array(
+	array_merge( $cs_row( 'cs css', 'body{}', 1 ), array( 'scope' => 'site-css' ) ),
+	array_merge( $cs_row( 'cs js', 'void 0;', 1 ), array( 'scope' => 'site-footer-js' ) ),
+	array_merge( $cs_row( 'cs css off', 'p{}', 0 ), array( 'scope' => 'admin-css' ) ),
+	$cs_row( 'cs php', '// php', 1 ),
+);
+$free_plan = slim_snippets_cs_plan( $asset_rows, false );
+$pro_plan  = slim_snippets_cs_plan( $asset_rows, true );
+$check(
+	array( 'inactive', 'inactive', 'inactive', 'active' ) === array_column( $free_plan, 'result' )
+	&& array( true, true, false, false ) === array_column( $free_plan, 'free_asset' )
+	&& array( 'active', 'active', 'inactive', 'active' ) === array_column( $pro_plan, 'result' )
+	&& ! array_filter( array_column( $pro_plan, 'free_asset' ) ),
+	'free Code Snippets CSS/JS copied inactive: ' . wp_json_encode( array( array_column( $free_plan, 'result' ), array_column( $pro_plan, 'result' ) ) )
+);
+
+// 27. While Code Snippets is active, an import activates nothing (the Trash is
+// still kept), and activation sees Code Snippets' active snippets, front-end
+// ones included, so a copy cannot redeclare one of their functions. This test
+// defines CODE_SNIPPETS_FILE, so it must stay last.
+$before             = $latest();
+list( $cs_counts ) = slim_snippets_import_files( array( array( 'snippets.json', $file ) ), 'keep', false );
+foreach ( get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => array( 'publish', 'draft', 'trash' ), 'numberposts' => -1, 'fields' => 'ids' ) ) as $new_id ) {
+	if ( $new_id > $before ) { // Only what this import made: never the site's own snippets.
+		$slim_made[] = $new_id;
+	}
+}
+global $wpdb;
+$cs_table = $wpdb->prefix . 'snippets';
+$cs_live  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $cs_table ) ) === $cs_table;
+if ( $cs_live ) {
+	defined( 'CODE_SNIPPETS_FILE' ) || define( 'CODE_SNIPPETS_FILE', WP_PLUGIN_DIR . '/code-snippets/code-snippets.php' );
+	$wpdb->insert( $cs_table, array( 'name' => 'slim check cs', 'description' => '', 'code' => 'function slim_check_cs_front() {}', 'tags' => '', 'scope' => 'front-end', 'priority' => 10, 'active' => 1 ) );
+	$cs_row_id = $wpdb->insert_id;
+	$cs_copy   = $make( 'function slim_check_cs_front() {}' );
+	$cs_result = slim_snippets_activate( $cs_copy );
+	$wpdb->delete( $cs_table, array( 'id' => $cs_row_id ) );
+}
+$check(
+	0 === $cs_counts['active'] && 0 === $cs_counts['failed'] && 1 === $cs_counts['trash']
+	&& ( ! $cs_live || ( 'error' === $cs_result[0] && false !== strpos( $cs_result[1], 'slim_check_cs_front()' ) ) ),
+	'Code Snippets active: import activates nothing, activation sees its snippets: ' . wp_json_encode( array( $cs_counts, $cs_live ? $cs_result : 'no Code Snippets table here' ) )
 );
 
 echo $slim_fail ? "\n$slim_fail FAILED\n" : "\nALL PASSED\n";

@@ -53,15 +53,18 @@ function slim_snippets_is_screen() {
 /**
  * Queue a notice for the current user's next snippets screen.
  *
- * @param string $type    success, error, warning or info.
- * @param string $message Message text.
- * @param string $detail  Optional preformatted text, such as a snippet's output.
+ * @param string          $type    success, error, warning or info.
+ * @param string          $message Message text.
+ * @param string|string[] $detail  Optional detail after the items: a string is
+ *                                 shown preformatted (a snippet's output), a
+ *                                 list of lines as a bulleted list (import notes).
+ * @param string[]        $items   Optional lines shown as a bulleted list after the message.
  */
-function slim_snippets_notice( $type, $message, $detail = '' ) {
+function slim_snippets_notice( $type, $message, $detail = '', $items = array() ) {
 	$key       = 'slim_snippets_notices_' . get_current_user_id();
 	$notices   = get_transient( $key );
 	$notices   = is_array( $notices ) ? $notices : array();
-	$notices[] = array( $type, $message, $detail );
+	$notices[] = array( $type, $message, $detail, $items );
 	set_transient( $key, $notices, HOUR_IN_SECONDS );
 }
 
@@ -137,9 +140,22 @@ function slim_snippets_admin_notices() {
 	}
 	delete_transient( $key );
 
-	foreach ( $notices as list( $type, $message, $detail ) ) {
+	foreach ( $notices as $notice ) {
+		list( $type, $message, $detail, $items ) = array_pad( $notice, 4, array() );
 		printf( '<div class="notice notice-%s is-dismissible"><p>%s</p>', esc_attr( $type ), esc_html( $message ) );
-		if ( '' !== $detail ) {
+		// The items, then a list-type detail (import and migration notes), as
+		// bulleted lists. A string detail, such as a snippet's output, stays
+		// preformatted.
+		foreach ( array( $items, is_array( $detail ) ? $detail : array() ) as $list ) {
+			if ( $list ) {
+				echo '<ul class="ul-disc">';
+				foreach ( $list as $line ) {
+					printf( '<li>%s</li>', esc_html( $line ) );
+				}
+				echo '</ul>';
+			}
+		}
+		if ( is_string( $detail ) && '' !== $detail ) {
 			printf( '<pre style="white-space:pre-wrap">%s</pre>', esc_html( $detail ) );
 		}
 		echo '</div>';
@@ -891,14 +907,17 @@ function slim_snippets_import_snippet( $snippet, $from_code_snippets = false, $k
 /**
  * Import the snippets of decoded export files and set their status.
  *
- * @param array  $files  Uploaded files, each array( file name, decoded JSON ).
- * @param string $status 'inactive' (every snippet inactive), 'keep' (the
- *                       status in the file, including the Trash) or 'active'
- *                       (activate every snippet).
+ * @param array  $files    Uploaded files, each array( file name, decoded JSON ).
+ * @param string $status   'inactive' (every snippet inactive), 'keep' (the
+ *                         status in the file, including the Trash) or 'active'
+ *                         (activate every snippet).
+ * @param bool   $activate False imports every snippet inactive whatever the
+ *                         status (while Code Snippets is active and running
+ *                         the originals); the Trash is still kept.
  * @return array{0: array<string, int>, 1: string[]} Counts and notes.
  */
-function slim_snippets_import_files( $files, $status ) {
-	$counts = array_fill_keys( array( 'active', 'inactive', 'trash', 'skipped' ), 0 );
+function slim_snippets_import_files( $files, $status, $activate = true ) {
+	$counts = array_fill_keys( array( 'active', 'inactive', 'failed', 'trash', 'skipped' ), 0 );
 	$notes  = array();
 	$queue  = array();
 	foreach ( $files as list( $file, $data ) ) {
@@ -923,8 +942,8 @@ function slim_snippets_import_files( $files, $status ) {
 				continue;
 			}
 			// An import never runs a run-once snippet.
-			$activate = 'active' === $status || ( 'keep' === $status && ! empty( $snippet['active'] ) );
-			if ( $activate && 'single-use' !== slim_snippets_scope( $id ) ) {
+			$wanted = $activate && ( 'active' === $status || ( 'keep' === $status && ! empty( $snippet['active'] ) ) );
+			if ( $wanted && 'single-use' !== slim_snippets_scope( $id ) ) {
 				$queue[] = $id;
 			} else {
 				++$counts['inactive'];
@@ -938,7 +957,7 @@ function slim_snippets_import_files( $files, $status ) {
 		if ( 'ok' === $state ) {
 			++$counts['active'];
 		} else {
-			++$counts['inactive'];
+			++$counts['failed']; // Imported, but left inactive.
 			/* translators: 1: snippet name, 2: error message */
 			$notes[] = sprintf( __( '"%1$s" left inactive: %2$s', 'slim-snippets' ), get_the_title( $id ), $text );
 		}
@@ -991,15 +1010,34 @@ function slim_snippets_import_page() {
 			<p><input type="file" id="slim-snippets-files" name="slim_snippets_files[]" accept=".json,application/json" multiple required></p>
 			<fieldset>
 				<legend><strong><?php esc_html_e( 'Status after import', 'slim-snippets' ); ?></strong></legend>
+				<?php
+				// While Code Snippets is active it runs the originals, so the import
+				// handler activates nothing. Offer only the choice that will happen.
+				$cs_active = defined( 'CODE_SNIPPETS_FILE' );
+				if ( $cs_active ) :
+					?>
+					<div class="notice notice-warning inline"><p>
+						<?php
+						echo wp_kses_post(
+							sprintf(
+								/* translators: 1: link to the Plugins screen, 2: link to the Migrate from Code Snippets section */
+								__( 'The Code Snippets plugin is active, so snippets can only be imported inactive. To keep their status or activate them, deactivate Code Snippets on the %1$s first, or use %2$s at the top of this page.', 'slim-snippets' ),
+								'<a href="' . esc_url( admin_url( 'plugins.php' ) ) . '">' . esc_html__( 'Plugins screen', 'slim-snippets' ) . '</a>',
+								'<a href="#migrate">' . esc_html__( 'Migrate from Code Snippets', 'slim-snippets' ) . '</a>'
+							)
+						);
+						?>
+					</p></div>
+				<?php endif; ?>
 				<p><label><input type="radio" name="slim_snippets_status" value="inactive" checked> <?php esc_html_e( 'Inactive: import every snippet inactive, so nothing runs until you activate it', 'slim-snippets' ); ?></label></p>
-				<p><label><input type="radio" name="slim_snippets_status" value="keep"> <?php esc_html_e( 'Keep the status from the file: activate the active snippets, keep the inactive ones inactive, and put trashed snippets in the Trash', 'slim-snippets' ); ?></label></p>
-				<p><label><input type="radio" name="slim_snippets_status" value="active"> <?php esc_html_e( 'Active: activate every snippet', 'slim-snippets' ); ?></label></p>
+				<p><label<?php echo $cs_active ? ' style="color:#8c8f94"' : ''; ?>><input type="radio" name="slim_snippets_status" value="keep"<?php disabled( $cs_active ); ?>> <?php esc_html_e( 'Keep the status from the file: activate the active snippets, keep the inactive ones inactive, and put trashed snippets in the Trash', 'slim-snippets' ); ?></label></p>
+				<p><label<?php echo $cs_active ? ' style="color:#8c8f94"' : ''; ?>><input type="radio" name="slim_snippets_status" value="active"<?php disabled( $cs_active ); ?>> <?php esc_html_e( 'Active: activate every snippet', 'slim-snippets' ); ?></label></p>
 			</fieldset>
 			<ul class="ul-disc">
 				<li><?php esc_html_e( 'Activating runs the usual checks. A snippet with an error, or one that declares a function or class that already exists, stays inactive and is listed in the notice.', 'slim-snippets' ); ?></li>
 				<li><?php esc_html_e( 'Run-once snippets are always imported inactive, so an import never runs them.', 'slim-snippets' ); ?></li>
 				<li><?php esc_html_e( 'Trashed snippets are not imported unless you keep the status from the file.', 'slim-snippets' ); ?></li>
-				<li><strong><?php esc_html_e( 'Migrating from Code Snippets?', 'slim-snippets' ); ?></strong> <?php esc_html_e( 'If the Code Snippets plugin is active on this site, use Migrate from Code Snippets at the top of this page. To import an export file instead, deactivate Code Snippets first. While Code Snippets is active, an imported copy that declares a function or class cannot be activated, and a copy that declares neither would run twice.', 'slim-snippets' ); ?></li>
+				<li><strong><?php esc_html_e( 'Migrating from Code Snippets?', 'slim-snippets' ); ?></strong> <?php esc_html_e( 'If the Code Snippets plugin is active on this site, use Migrate from Code Snippets at the top of this page.', 'slim-snippets' ); ?></li>
 			</ul>
 			<?php submit_button( __( 'Import', 'slim-snippets' ) ); ?>
 		</form>
@@ -1036,20 +1074,38 @@ add_action(
 			}
 		}
 
-		list( $counts, $notes ) = slim_snippets_import_files( $files, $status );
-		$total                  = $counts['active'] + $counts['inactive'] + $counts['trash'];
+		// While Code Snippets is active it still runs the originals: an active copy
+		// would run twice, or take the site down if it declares a function or class.
+		$cs_active              = defined( 'CODE_SNIPPETS_FILE' );
+		list( $counts, $notes ) = slim_snippets_import_files( $files, $status, ! $cs_active );
+		$total                  = $counts['active'] + $counts['inactive'] + $counts['failed'] + $counts['trash'];
+		$items                  = array(
+			/* translators: %d: number of snippets */
+			sprintf( _n( '%d active', '%d active', $counts['active'], 'slim-snippets' ), $counts['active'] ),
+			/* translators: %d: number of snippets */
+			sprintf( _n( '%d inactive', '%d inactive', $counts['inactive'], 'slim-snippets' ), $counts['inactive'] ),
+		);
+		if ( $counts['failed'] ) {
+			/* translators: %d: number of snippets */
+			$items[] = sprintf( _n( '%d left inactive because of an error, listed below', '%d left inactive because of an error, listed below', $counts['failed'], 'slim-snippets' ), $counts['failed'] );
+		}
+		if ( $counts['trash'] ) {
+			/* translators: %d: number of snippets */
+			$items[] = sprintf( _n( '%d in the Trash', '%d in the Trash', $counts['trash'], 'slim-snippets' ), $counts['trash'] );
+		}
+		if ( $counts['skipped'] ) {
+			/* translators: %d: number of snippets */
+			$items[] = sprintf( _n( '%d skipped, listed below', '%d skipped, listed below', $counts['skipped'], 'slim-snippets' ), $counts['skipped'] );
+		}
+		if ( $cs_active && 'inactive' !== $status ) {
+			$items[] = __( 'None were activated, because the Code Snippets plugin is active. Deactivate it, then activate the snippets you want.', 'slim-snippets' );
+		}
 		slim_snippets_notice(
-			$notes ? 'warning' : 'success',
-			sprintf(
-				/* translators: 1: imported count, 2: active, 3: inactive, 4: in the Trash, 5: skipped */
-				_n( 'Imported %1$d snippet: %2$d active, %3$d inactive, %4$d in the Trash. Skipped %5$d.', 'Imported %1$d snippets: %2$d active, %3$d inactive, %4$d in the Trash. Skipped %5$d.', $total, 'slim-snippets' ),
-				$total,
-				$counts['active'],
-				$counts['inactive'],
-				$counts['trash'],
-				$counts['skipped']
-			),
-			implode( "\n", $notes )
+			$notes || ( $cs_active && 'inactive' !== $status ) ? 'warning' : 'success',
+			/* translators: %d: number of snippets */
+			sprintf( _n( 'Imported %d snippet:', 'Imported %d snippets:', $total, 'slim-snippets' ), $total ),
+			$notes,
+			$items
 		);
 		wp_safe_redirect( admin_url( 'edit.php?post_type=slim_snippet' ) );
 		exit;
@@ -1068,10 +1124,20 @@ add_action(
  * @return array[] One row per Code Snippets snippet: 'snippet' (export-style
  *                 array), 'status' in Code Snippets ('active', 'inactive' or
  *                 'trash'), 'result' ('active', 'inactive' or 'skip'), 'note'
- *                 (why it is skipped, or '') and 'existing' (ID of the inactive
- *                 Slim Snippets copy to activate instead of copying again, or 0).
+ *                 (why it is skipped, or ''), 'existing' (ID of the inactive
+ *                 Slim Snippets copy to activate instead of copying again, or 0),
+ *                 'id' (the snippet's ID in Code Snippets), 'review' (true
+ *                 when the snippet is not migrated because it is trashed, its
+ *                 scope is not supported or it uses a condition, so its code
+ *                 would be lost from view once Code Snippets is deactivated)
+ *                 and 'free_asset'
+ *                 (true when it is an active CSS or JavaScript snippet that the
+ *                 free Code Snippets plugin never ran, so it is copied inactive).
+ *
+ * @param bool|null    $pro  Whether Code Snippets Pro is the plugin migrated from;
+ *                           null reads CODE_SNIPPETS_PRO.
  */
-function slim_snippets_cs_plan( $rows = null ) {
+function slim_snippets_cs_plan( $rows = null, $pro = null ) {
 	global $wpdb;
 	if ( null === $rows ) {
 		$table = $wpdb->prefix . 'snippets';
@@ -1098,25 +1164,33 @@ function slim_snippets_cs_plan( $rows = null ) {
 	}
 	// A network-active Code Snippets is not deactivated here, so nothing may be activated.
 	$can_activate = ! defined( 'CODE_SNIPPETS_FILE' ) || ! is_plugin_active_for_network( plugin_basename( CODE_SNIPPETS_FILE ) );
+	// CSS and JavaScript snippets are Pro features: the free plugin keeps them,
+	// but never runs them. Copying them active would start code that never ran.
+	$pro = null === $pro ? defined( 'CODE_SNIPPETS_PRO' ) && CODE_SNIPPETS_PRO : $pro;
 
 	$plan = array();
 	foreach ( (array) $rows as $row ) {
 		$name     = sanitize_text_field( $row['name'] );
 		$status   = (int) $row['active'] < 0 ? 'trash' : ( (int) $row['active'] ? 'active' : 'inactive' );
-		$active   = $can_activate && 'active' === $status && 'single-use' !== $row['scope'];
+		$free_css = ! $pro && 'active' === $status && isset( SLIM_SNIPPETS_OUTPUT_HOOKS[ $row['scope'] ] );
+		$active   = $can_activate && 'active' === $status && 'single-use' !== $row['scope'] && ! $free_css;
 		$key      = $key_of( $name, $row['code'] );
 		$dup      = isset( $have[ $key ] ) ? $have[ $key ] : null;
 		$note     = '';
 		$existing = 0;
+		$review   = false;
 		if ( 'trash' === $status ) {
-			$note = __( 'in the Code Snippets Trash', 'slim-snippets' );
+			$note   = __( 'in the Code Snippets Trash', 'slim-snippets' );
+			$review = true;
 		} elseif ( ! array_key_exists( $row['scope'], slim_snippets_scopes() ) ) {
 			/* translators: %s: Code Snippets scope name */
-			$note = sprintf( __( 'scope "%s" is not supported', 'slim-snippets' ), $row['scope'] );
+			$note   = sprintf( __( 'scope "%s" is not supported', 'slim-snippets' ), $row['scope'] );
+			$review = true;
 		} elseif ( ! empty( $row['condition_id'] ) ) {
-			$note = __( 'uses a Code Snippets condition, which is not supported', 'slim-snippets' );
+			$note   = __( 'uses a Code Snippets condition, which is not supported', 'slim-snippets' );
+			$review = true;
 		} elseif ( is_int( $dup ) ) {
-			$note = __( 'duplicate of a Code Snippets snippet listed above', 'slim-snippets' );
+			$note = __( 'duplicate of another Code Snippets snippet with the same name and code', 'slim-snippets' );
 			if ( $active && 'single-use' !== $plan[ $dup ]['snippet']['scope'] ) {
 				$plan[ $dup ]['result'] = 'active';
 			}
@@ -1129,7 +1203,7 @@ function slim_snippets_cs_plan( $rows = null ) {
 			$have[ $key ] = count( $plan );
 		}
 		$plan[] = array(
-			'snippet'  => array(
+			'snippet'    => array(
 				'name'     => $name,
 				'desc'     => $row['description'],
 				'code'     => $row['code'],
@@ -1137,10 +1211,13 @@ function slim_snippets_cs_plan( $rows = null ) {
 				'scope'    => $row['scope'],
 				'priority' => $row['priority'],
 			),
-			'status'   => $status,
-			'result'   => $note ? 'skip' : ( $active ? 'active' : 'inactive' ),
-			'note'     => $note,
-			'existing' => $existing,
+			'status'     => $status,
+			'result'     => $note ? 'skip' : ( $active ? 'active' : 'inactive' ),
+			'note'       => $note,
+			'existing'   => $existing,
+			'id'         => isset( $row['id'] ) ? (int) $row['id'] : 0,
+			'review'     => $review,
+			'free_asset' => $free_css && ! $note,
 		);
 	}
 	return $plan;
@@ -1185,6 +1262,9 @@ function slim_snippets_cs_check( $ids ) {
 
 /**
  * Migrate section of the Import / Export page, shown while Code Snippets is active.
+ * Snippets are listed in three tables by their status in Code Snippets. Every
+ * snippet that can be migrated has a checkbox, checked by default; WordPress's
+ * common.js gives each table's header checkbox its check-all behavior.
  */
 function slim_snippets_cs_section() {
 	$plan    = slim_snippets_cs_plan();
@@ -1196,12 +1276,32 @@ function slim_snippets_cs_section() {
 		'trash'    => __( 'Trash', 'slim-snippets' ),
 	);
 	$network = is_plugin_active_for_network( plugin_basename( CODE_SNIPPETS_FILE ) );
+	$review  = array_filter( array_column( $plan, 'review' ) );
+	$assets  = array_filter( array_column( $plan, 'free_asset' ) );
 	?>
 	<h2 id="migrate"><?php esc_html_e( 'Migrate from Code Snippets', 'slim-snippets' ); ?></h2>
 	<ul class="ul-disc">
-		<li><?php esc_html_e( 'The Code Snippets plugin is active on this site. Migrating copies its snippets into Slim Snippets and then deactivates Code Snippets, so the same snippets do not run in both plugins.', 'slim-snippets' ); ?></li>
-		<li><?php esc_html_e( 'Snippets that are active in Code Snippets are active in Slim Snippets after migrating. Run-once snippets are copied inactive.', 'slim-snippets' ); ?></li>
-		<li><?php esc_html_e( 'The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it.', 'slim-snippets' ); ?></li>
+		<li><?php esc_html_e( 'The Code Snippets plugin is active on this site. Migrating copies the selected snippets into Slim Snippets and then deactivates Code Snippets, so the same snippets do not run in both plugins.', 'slim-snippets' ); ?></li>
+		<li>
+			<?php
+			esc_html_e( 'Every snippet that can be migrated is selected. A snippet you clear is not copied.', 'slim-snippets' );
+			if ( ! $network ) {
+				echo ' ' . esc_html__( 'If it is active, it stops running when Code Snippets is deactivated.', 'slim-snippets' );
+			}
+			?>
+		</li>
+		<li>
+			<?php
+			esc_html_e( 'Snippets that are active in Code Snippets are active in Slim Snippets after migrating, except run-once snippets, which are copied inactive.', 'slim-snippets' );
+			if ( $assets ) {
+				echo ' ' . esc_html__( 'CSS and JavaScript snippets are copied inactive too, because the free Code Snippets plugin does not run them.', 'slim-snippets' );
+			}
+			?>
+		</li>
+		<li><?php esc_html_e( 'The Code Snippets plugin and its snippets are not changed or deleted. To switch back, deactivate Slim Snippets first, then reactivate Code Snippets. With both plugins active, the same snippets run twice, and a snippet that declares a function or class causes a fatal error.', 'slim-snippets' ); ?></li>
+		<?php if ( $review && ! $network ) : ?>
+			<li><?php esc_html_e( 'Snippets with a "view snippet" link below are not migrated. Once the Code Snippets plugin is deactivated, the active ones stop running and none of them can be viewed there. Open each one before you migrate.', 'slim-snippets' ); ?></li>
+		<?php endif; ?>
 		<?php if ( $network ) : ?>
 			<li><strong><?php esc_html_e( 'The Code Snippets plugin is network-activated, so it is not deactivated here and every snippet is copied inactive.', 'slim-snippets' ); ?></strong></li>
 		<?php endif; ?>
@@ -1212,48 +1312,100 @@ function slim_snippets_cs_section() {
 		return;
 	endif;
 	?>
-	<table class="widefat striped" style="max-width:1000px">
-		<thead>
-			<tr>
-				<th><?php esc_html_e( 'Snippet', 'slim-snippets' ); ?></th>
-				<th><?php esc_html_e( 'Scope', 'slim-snippets' ); ?></th>
-				<th><?php esc_html_e( 'In Code Snippets', 'slim-snippets' ); ?></th>
-				<th><?php esc_html_e( 'After migrating', 'slim-snippets' ); ?></th>
-			</tr>
-		</thead>
-		<tbody>
-			<?php foreach ( $plan as $item ) : ?>
-				<tr>
-					<td><?php echo esc_html( '' === $item['snippet']['name'] ? __( '(no title)', 'slim-snippets' ) : $item['snippet']['name'] ); ?></td>
-					<td><?php echo esc_html( isset( $scopes[ $item['snippet']['scope'] ] ) ? $scopes[ $item['snippet']['scope'] ] : $item['snippet']['scope'] ); ?></td>
-					<td><?php echo esc_html( $labels[ $item['status'] ] ); ?></td>
-					<td>
-						<?php
-						if ( 'trash' === $item['status'] ) {
-							esc_html_e( 'Not migrated', 'slim-snippets' ); // The status column already says Trash.
-						} elseif ( 'skip' === $item['result'] ) {
-							/* translators: %s: reason, for example "already in Slim Snippets" */
-							echo esc_html( sprintf( __( 'Not migrated: %s', 'slim-snippets' ), $item['note'] ) );
-						} elseif ( $item['existing'] ) {
-							esc_html_e( 'Active (activates the copy already in Slim Snippets)', 'slim-snippets' );
-						} else {
-							echo esc_html( $labels[ $item['result'] ] );
-						}
-						?>
-					</td>
-				</tr>
-			<?php endforeach; ?>
-		</tbody>
-	</table>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="slim_snippets_migrate">
 		<?php
 		wp_nonce_field( 'slim_snippets_migrate' );
+		foreach ( $labels as $status => $heading ) :
+			$items = array_filter( $plan, fn( $item ) => $status === $item['status'] );
+			if ( ! $items ) {
+				continue;
+			}
+			$pick = 'trash' !== $status;
+			?>
+			<h3>
+				<?php
+				/* translators: 1: Active, Inactive or Trash, 2: number of snippets */
+				echo esc_html( sprintf( __( '%1$s (%2$d)', 'slim-snippets' ), $heading, count( $items ) ) );
+				?>
+			</h3>
+			<table class="wp-list-table widefat striped" style="max-width:1000px">
+				<thead>
+					<tr>
+						<?php if ( $pick ) : ?>
+							<td class="manage-column column-cb check-column">
+								<input type="checkbox" id="slim-snippets-cs-all-<?php echo esc_attr( $status ); ?>" checked>
+								<label for="slim-snippets-cs-all-<?php echo esc_attr( $status ); ?>"><span class="screen-reader-text">
+									<?php
+									echo esc_html( 'active' === $status ? __( 'Select all active snippets', 'slim-snippets' ) : __( 'Select all inactive snippets', 'slim-snippets' ) );
+									?>
+								</span></label>
+							</td>
+						<?php endif; ?>
+						<th scope="col"><?php esc_html_e( 'Snippet', 'slim-snippets' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Scope', 'slim-snippets' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'After migrating', 'slim-snippets' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php
+					foreach ( $items as $item ) :
+						$name = '' === $item['snippet']['name'] ? __( '(no title)', 'slim-snippets' ) : $item['snippet']['name'];
+						?>
+						<tr>
+							<?php if ( $pick ) : ?>
+								<th scope="row" class="check-column">
+									<?php if ( 'skip' !== $item['result'] ) : ?>
+										<input type="checkbox" name="slim_snippets_cs[]" value="<?php echo (int) $item['id']; ?>" id="slim-snippets-cs-<?php echo (int) $item['id']; ?>" checked>
+										<label for="slim-snippets-cs-<?php echo (int) $item['id']; ?>"><span class="screen-reader-text">
+											<?php
+											/* translators: %s: snippet name */
+											echo esc_html( sprintf( __( 'Migrate "%s"', 'slim-snippets' ), $name ) );
+											?>
+										</span></label>
+									<?php endif; ?>
+								</th>
+							<?php endif; ?>
+							<td><?php echo esc_html( $name ); ?></td>
+							<td><?php echo esc_html( isset( $scopes[ $item['snippet']['scope'] ] ) ? $scopes[ $item['snippet']['scope'] ] : $item['snippet']['scope'] ); ?></td>
+							<td>
+								<?php
+								if ( 'skip' === $item['result'] ) {
+									if ( 'trash' === $item['status'] ) {
+										esc_html_e( 'Not migrated', 'slim-snippets' ); // The table heading already says Trash.
+									} else {
+										/* translators: %s: reason, for example "already in Slim Snippets" */
+										echo esc_html( sprintf( __( 'Not migrated: %s', 'slim-snippets' ), $item['note'] ) );
+									}
+									// Its code is out of reach once Code Snippets is deactivated: link to it so the
+									// site owner can see what it does and how to replace it.
+									if ( $item['review'] && $item['id'] ) {
+										$edit = function_exists( 'Code_Snippets\code_snippets' ) ? \Code_Snippets\code_snippets()->get_menu_url( 'edit' ) : admin_url( 'admin.php?page=edit-snippet' );
+										printf(
+											'. <a href="%s" target="_blank" rel="noopener noreferrer">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external" style="font-size:16px;width:16px;height:16px;vertical-align:text-bottom;text-decoration:none"></span></a>',
+											esc_url( add_query_arg( 'id', $item['id'], $edit ) ),
+											esc_html__( 'view snippet', 'slim-snippets' ),
+											esc_html__( '(opens in a new tab)', 'slim-snippets' )
+										);
+									}
+								} elseif ( $item['existing'] ) {
+									esc_html_e( 'Active (activates the copy already in Slim Snippets)', 'slim-snippets' );
+								} elseif ( $item['free_asset'] ) {
+									esc_html_e( 'Inactive (CSS and JavaScript snippets do not run in the free Code Snippets plugin)', 'slim-snippets' );
+								} else {
+									echo esc_html( $labels[ $item['result'] ] );
+								}
+								?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php
+		endforeach;
 		$label = $network
-			/* translators: %d: number of snippets */
-			? sprintf( _n( 'Migrate %d Snippet', 'Migrate %d Snippets', $todo, 'slim-snippets' ), $todo )
-			/* translators: %d: number of snippets */
-			: sprintf( _n( 'Migrate %d Snippet and Deactivate Code Snippets', 'Migrate %d Snippets and Deactivate Code Snippets', $todo, 'slim-snippets' ), $todo );
+			? __( 'Migrate Selected Snippets', 'slim-snippets' )
+			: __( 'Migrate Selected Snippets and Deactivate Code Snippets', 'slim-snippets' );
 		submit_button( $label, 'primary', 'submit', true, $todo ? array() : array( 'disabled' => 'disabled' ) );
 		?>
 	</form>
@@ -1273,8 +1425,16 @@ add_action(
 			wp_safe_redirect( $back );
 			exit;
 		}
+		// Code Snippets IDs of the snippets checked on the migrate form. Nothing
+		// checked is most likely a mistake: change nothing, and say so.
+		$selected = isset( $_POST['slim_snippets_cs'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['slim_snippets_cs'] ) ) : array();
+		if ( ! $selected ) {
+			slim_snippets_notice( 'error', __( 'No snippets were selected, so nothing was migrated and the Code Snippets plugin is still active.', 'slim-snippets' ) );
+			wp_safe_redirect( admin_url( 'edit.php?post_type=slim_snippet&page=slim-snippets-import#migrate' ) );
+			exit;
+		}
 
-		$counts = array_fill_keys( array( 'active', 'inactive', 'trash', 'skipped' ), 0 );
+		$counts = array_fill_keys( array( 'active', 'inactive', 'failed', 'trash', 'skipped', 'unselected' ), 0 );
 		$notes  = array();
 		$queue  = array();
 		foreach ( slim_snippets_cs_plan() as $item ) {
@@ -1286,6 +1446,10 @@ add_action(
 			if ( 'skip' === $item['result'] ) {
 				++$counts['skipped'];
 				$notes[] = '"' . $item['snippet']['name'] . '": ' . $item['note'];
+				continue;
+			}
+			if ( ! in_array( $item['id'], $selected, true ) ) {
+				++$counts['unselected'];
 				continue;
 			}
 			if ( $item['existing'] ) {
@@ -1308,7 +1472,7 @@ add_action(
 		$errors = slim_snippets_cs_check( $queue );
 		foreach ( array_filter( $errors ) as $id => $error ) {
 			update_post_meta( $id, '_slim_snippets_error', $error );
-			++$counts['inactive'];
+			++$counts['failed']; // Copied, but left inactive.
 			/* translators: 1: snippet name, 2: error message */
 			$notes[] = sprintf( __( '"%1$s" left inactive: %2$s', 'slim-snippets' ), get_the_title( $id ), $error );
 		}
@@ -1323,29 +1487,38 @@ add_action(
 		}
 		slim_snippets_rebuild();
 
-		$total = $counts['active'] + $counts['inactive'];
-		$not   = array();
+		$total = $counts['active'] + $counts['inactive'] + $counts['failed'];
+		$items = array(
+			/* translators: %d: number of snippets */
+			sprintf( _n( '%d active', '%d active', $counts['active'], 'slim-snippets' ), $counts['active'] ),
+			/* translators: %d: number of snippets */
+			sprintf( _n( '%d inactive', '%d inactive', $counts['inactive'], 'slim-snippets' ), $counts['inactive'] ),
+		);
+		if ( $counts['failed'] ) {
+			/* translators: %d: number of snippets */
+			$items[] = sprintf( _n( '%d left inactive because of an error, listed below', '%d left inactive because of an error, listed below', $counts['failed'], 'slim-snippets' ), $counts['failed'] );
+		}
 		if ( $counts['trash'] ) {
 			/* translators: %d: number of snippets */
-			$not[] = sprintf( __( '%d in the Code Snippets Trash', 'slim-snippets' ), $counts['trash'] );
+			$items[] = sprintf( _n( '%d not migrated because it is in the Code Snippets Trash', '%d not migrated because they are in the Code Snippets Trash', $counts['trash'], 'slim-snippets' ), $counts['trash'] );
+		}
+		if ( $counts['unselected'] ) {
+			/* translators: %d: number of snippets */
+			$items[] = sprintf( _n( '%d not migrated because it was not selected', '%d not migrated because they were not selected', $counts['unselected'], 'slim-snippets' ), $counts['unselected'] );
 		}
 		if ( $counts['skipped'] ) {
 			/* translators: %d: number of snippets */
-			$not[] = sprintf( __( '%d listed below', 'slim-snippets' ), $counts['skipped'] );
+			$items[] = sprintf( _n( '%d not migrated, listed below', '%d not migrated, listed below', $counts['skipped'], 'slim-snippets' ), $counts['skipped'] );
+		}
+		if ( ! is_plugin_active( $file ) ) {
+			$items[] = __( 'The Code Snippets plugin is deactivated', 'slim-snippets' );
 		}
 		slim_snippets_notice(
 			$notes ? 'warning' : 'success',
-			sprintf(
-				/* translators: 1: migrated count, 2: active, 3: inactive */
-				_n( 'Migrated %1$d snippet from Code Snippets: %2$d active, %3$d inactive.', 'Migrated %1$d snippets from Code Snippets: %2$d active, %3$d inactive.', $total, 'slim-snippets' ),
-				$total,
-				$counts['active'],
-				$counts['inactive']
-			)
-			/* translators: %s: for example "115 in the Code Snippets Trash, 2 listed below" */
-			. ( $not ? ' ' . sprintf( __( 'Not migrated: %s.', 'slim-snippets' ), implode( ', ', $not ) ) : '' )
-			. ( is_plugin_active( $file ) ? '' : ' ' . __( 'The Code Snippets plugin is deactivated.', 'slim-snippets' ) ),
-			implode( "\n", array_filter( $notes ) )
+			/* translators: %d: number of snippets */
+			sprintf( _n( 'Migrated %d snippet from Code Snippets:', 'Migrated %d snippets from Code Snippets:', $total, 'slim-snippets' ), $total ),
+			array_values( array_filter( $notes ) ),
+			$items
 		);
 		wp_safe_redirect( $back );
 		exit;

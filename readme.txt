@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,7 +28,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **Search** across the name, code, description and tags.
 * **Revisions** of the code, title and description.
 * **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction. Import several files at once, and choose whether the snippets arrive inactive (the default), keep the status from the file, or are all activated.
-* **Migrate from Code Snippets** on the same site with one click: review what will be copied, then Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
+* **Migrate from Code Snippets** on the same site with one click: review and choose what will be copied, then Slim Snippets copies the selected snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
 * **Updates from GitHub.** New releases show on the Plugins and Updates screens like other plugin updates, and auto-updates can be turned on.
 
 No custom database tables. Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
@@ -50,12 +50,12 @@ If `wp-config.php` sets `DISALLOW_UNFILTERED_HTML` to true, nobody can manage sn
 If the Code Snippets plugin is active on the same site, Slim Snippets can migrate them for you:
 
 1. Go to Snippets > Import / Export. While the Code Snippets plugin is active, Migrate from Code Snippets is the first section.
-2. Review the list. It shows each Code Snippets snippet, its status in Code Snippets, and whether it will be migrated.
-3. Click the Migrate button. Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets.
+2. Review the lists of active, inactive and trashed snippets and what will happen to each. Every snippet that can be migrated is selected; clear the ones you do not want.
+3. Click the Migrate button. Slim Snippets copies the selected snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets.
 
-Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), and snippets that use a Code Snippets condition are not migrated. A snippet that is already in Slim Snippets (same name and code) is not copied again; if that copy is inactive and the snippet is active in Code Snippets, the copy is activated. Run-once snippets are copied inactive.
+Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), and snippets that use a Code Snippets condition are not migrated. A snippet that is already in Slim Snippets (same name and code) is not copied again; if that copy is inactive and the snippet is active in Code Snippets, the copy is activated. Run-once snippets are copied inactive, and so are CSS and JavaScript snippets from the free Code Snippets plugin, which does not run them.
 
-A copy with a syntax error, or one that declares a function or class that already exists, stays inactive and is named in the notice. The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it. If the Code Snippets plugin is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
+A copy with a syntax error, or one that declares a function or class that already exists, stays inactive and is named in the notice. The Code Snippets plugin and its snippets are not changed or deleted. To switch back, deactivate Slim Snippets first, then reactivate Code Snippets. If the Code Snippets plugin is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
 
 To move snippets from Code Snippets on another site, export them there and import the file:
 
@@ -63,7 +63,7 @@ To move snippets from Code Snippets on another site, export them there and impor
 2. On this site, go to Snippets > Import / Export, upload the file, and choose the status after import.
 3. If you imported them inactive, activate the snippets you want, one at a time or with the Activate bulk action.
 
-If the Code Snippets plugin is already active on this site, use the migration above instead. Code Snippets runs its active snippets on every page load. An imported copy that declares a function or class cannot be activated, because PHP does not allow one to be declared twice. A copy that declares neither can be activated, but it then runs twice: once from Code Snippets and once from Slim Snippets.
+If the Code Snippets plugin is already active on this site, use the migration above instead. While it is active, every imported snippet is left inactive: Code Snippets is still running the originals, so an active copy would run twice, or cause a fatal error if it declares a function or class.
 
 Run-once snippets are always imported inactive, and snippets with unsupported scopes (shortcodes and HTML content) are skipped.
 
@@ -75,7 +75,7 @@ Add `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` to `wp-config.php`, fix or deac
 
 = How do I get updates? =
 
-Slim Snippets updates from its releases on GitHub, not from WordPress.org. A new release shows on the Plugins and Updates screens like other plugin updates, and you can turn on auto-updates for it. WordPress checks every 12 hours; to check now, click Check again on Dashboard > Updates. Update checks go to api.github.com and raw.githubusercontent.com (for the release's `readme.txt`, which says which WordPress and PHP versions it works with) and do not include your site's address. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
+Slim Snippets updates from its releases on GitHub, not from WordPress.org. A new release shows on the Plugins and Updates screens like other plugin updates, and you can turn on auto-updates for it. WordPress checks every 12 hours; to check now, click Check again on Dashboard > Updates. Update checks go to api.github.com and raw.githubusercontent.com (for version requirements) and do not include your site's address. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
 
 Versions before 1.2.0 cannot update themselves. Install 1.2.0 from GitHub once, and later releases arrive as updates.
 
@@ -106,10 +106,13 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.2.2 | 2026-11-25 =
-* Updated the plugin description to mention migrating from the Code Snippets plugin.
-* Updated the Safe mode description: the URL parameter works only for users who can manage snippets.
-* Fixed snippets becoming active without the activation checks when published another way (the WordPress importer, a revision restore, WP-CLI or another plugin). They are now saved inactive.
-* Removed snippets from Tools > Export. Use Snippets > Import / Export instead.
+= 1.2.3 | 2026-11-25 =
+* Added checkboxes to the migration page, which now lists snippets in Active, Inactive and Trash tables. Only the selected snippets are copied.
+* Added a "view snippet" link, opening in a new tab, for each Code Snippets snippet that is not migrated.
+* Updated the import and migration results to show each count and note on its own line, and to count snippets left inactive by an error separately.
+* Updated the migration page to say how to switch back safely: deactivate Slim Snippets first, then reactivate Code Snippets.
+* Updated the migration after testing with Code Snippets Pro 4.1.0: CSS and JavaScript snippets keep their status from Pro, and are copied inactive from the free plugin, which does not run them.
+* Updated the import page to offer only Inactive while the Code Snippets plugin is active.
+* Fixed a fatal error when a snippet activated while Code Snippets was active declared a function or class that one of its front-end snippets also declares.
 
 Older versions are listed in `changelog.txt`.
