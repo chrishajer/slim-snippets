@@ -1047,18 +1047,26 @@ add_action(
 
 		list( $counts, $notes ) = slim_snippets_import_files( $files, $status );
 		$total                  = $counts['active'] + $counts['inactive'] + $counts['trash'];
+		$items                  = array(
+			/* translators: %d: number of snippets */
+			sprintf( _n( '%d active', '%d active', $counts['active'], 'slim-snippets' ), $counts['active'] ),
+			/* translators: %d: number of snippets */
+			sprintf( _n( '%d inactive', '%d inactive', $counts['inactive'], 'slim-snippets' ), $counts['inactive'] ),
+		);
+		if ( $counts['trash'] ) {
+			/* translators: %d: number of snippets */
+			$items[] = sprintf( _n( '%d in the Trash', '%d in the Trash', $counts['trash'], 'slim-snippets' ), $counts['trash'] );
+		}
+		if ( $counts['skipped'] ) {
+			/* translators: %d: number of snippets */
+			$items[] = sprintf( _n( '%d skipped, listed below', '%d skipped, listed below', $counts['skipped'], 'slim-snippets' ), $counts['skipped'] );
+		}
 		slim_snippets_notice(
 			$notes ? 'warning' : 'success',
-			sprintf(
-				/* translators: 1: imported count, 2: active, 3: inactive, 4: in the Trash, 5: skipped */
-				_n( 'Imported %1$d snippet: %2$d active, %3$d inactive, %4$d in the Trash. Skipped %5$d.', 'Imported %1$d snippets: %2$d active, %3$d inactive, %4$d in the Trash. Skipped %5$d.', $total, 'slim-snippets' ),
-				$total,
-				$counts['active'],
-				$counts['inactive'],
-				$counts['trash'],
-				$counts['skipped']
-			),
-			implode( "\n", $notes )
+			/* translators: %d: number of snippets */
+			sprintf( _n( 'Imported %d snippet:', 'Imported %d snippets:', $total, 'slim-snippets' ), $total ),
+			implode( "\n", $notes ),
+			$items
 		);
 		wp_safe_redirect( admin_url( 'edit.php?post_type=slim_snippet' ) );
 		exit;
