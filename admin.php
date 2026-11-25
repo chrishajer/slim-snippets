@@ -1292,7 +1292,7 @@ function slim_snippets_cs_section() {
 		</li>
 		<li>
 			<?php
-			esc_html_e( 'Snippets that are active in Code Snippets are active in Slim Snippets after migrating. Run-once snippets are copied inactive.', 'slim-snippets' );
+			esc_html_e( 'Snippets that are active in Code Snippets are active in Slim Snippets after migrating, except run-once snippets, which are copied inactive.', 'slim-snippets' );
 			if ( $assets ) {
 				echo ' ' . esc_html__( 'CSS and JavaScript snippets are copied inactive too, because the free Code Snippets plugin does not run them.', 'slim-snippets' );
 			}
