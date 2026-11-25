@@ -1264,9 +1264,9 @@ function slim_snippets_cs_section() {
 							if ( $item['review'] && $item['id'] ) {
 								$edit = function_exists( 'Code_Snippets\code_snippets' ) ? \Code_Snippets\code_snippets()->get_menu_url( 'edit' ) : admin_url( 'admin.php?page=edit-snippet' );
 								printf(
-									'<br><a href="%s" target="_blank" rel="noopener noreferrer">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external" style="font-size:16px;width:16px;height:16px;vertical-align:text-bottom;text-decoration:none"></span></a>',
+									'. <a href="%s" target="_blank" rel="noopener noreferrer">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external" style="font-size:16px;width:16px;height:16px;vertical-align:text-bottom;text-decoration:none"></span></a>',
 									esc_url( add_query_arg( 'id', $item['id'], $edit ) ),
-									esc_html__( 'View in Code Snippets', 'slim-snippets' ),
+									esc_html__( 'view snippet', 'slim-snippets' ),
 									esc_html__( '(opens in a new tab)', 'slim-snippets' )
 								);
 							}
