@@ -404,4 +404,30 @@ $check(
 	'updater: ' . wp_json_encode( array( $up, $other, $foreign, $down ) )
 );
 
+// 23. Only the activation checks make a snippet active. Publishing or
+// scheduling good code with wp_insert_post() (the WordPress importer, WP-CLI),
+// changing an active snippet's code with wp_update_post() (another plugin) and
+// restoring a revision all leave the snippet inactive and out of the index.
+// Tools > Export leaves snippets out.
+$gate_new    = $make( '// gate new', 'global', array( 'post_status' => 'publish' ) );
+$gate_future = $make( '// gate future', 'global', array( 'post_status' => 'future', 'post_date' => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ) ) );
+$gate_live   = $make( '// gate live' );
+slim_snippets_activate( $gate_live );
+$gate_was    = get_post_status( $gate_live );
+wp_update_post( array( 'ID' => $gate_live, 'post_content' => '// gate changed' ) );
+$gate_edited = get_post_status( $gate_live );
+slim_snippets_activate( $gate_live );
+$gate_revs   = wp_get_post_revisions( $gate_live );
+$gate_rev    = $gate_revs ? reset( $gate_revs ) : null;
+if ( $gate_rev ) {
+	wp_restore_post_revision( $gate_rev->ID );
+}
+$check(
+	'draft' === get_post_status( $gate_new ) && 'draft' === get_post_status( $gate_future )
+	&& 'publish' === $gate_was && 'draft' === $gate_edited && $gate_rev && 'draft' === get_post_status( $gate_live )
+	&& ! $in_index( $gate_new ) && ! $in_index( $gate_future ) && ! $in_index( $gate_live )
+	&& ! get_post_type_object( 'slim_snippet' )->can_export,
+	'only activation makes a snippet active: ' . wp_json_encode( array( get_post_status( $gate_new ), get_post_status( $gate_future ), $gate_was, $gate_edited, (bool) $gate_rev, get_post_status( $gate_live ) ) )
+);
+
 echo $slim_fail ? "\n$slim_fail FAILED\n" : "\nALL PASSED\n";

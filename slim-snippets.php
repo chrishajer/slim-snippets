@@ -3,7 +3,7 @@
  * Plugin Name:       Slim Snippets
  * Plugin URI:        https://github.com/chrishajer/slim-snippets
  * Description:       Run PHP, CSS and JavaScript snippets without editing functions.php. Migrate from the Code Snippets plugin or import its exports.
- * Version:           1.2.1
+ * Version:           1.2.2
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Chris Hajer
@@ -22,7 +22,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SLIM_SNIPPETS_VERSION', '1.2.1' );
+define( 'SLIM_SNIPPETS_VERSION', '1.2.2' );
 define( 'SLIM_SNIPPETS_FILE', __FILE__ );
 
 /**
@@ -103,6 +103,10 @@ function slim_snippets_register() {
 			'rewrite'             => false,
 			'query_var'           => false,
 			'menu_icon'           => 'dashicons-editor-code',
+			// Tools > Export would put snippet code in the export file, and the
+			// WordPress importer is not the place to bring snippets in. Use the
+			// Import / Export page.
+			'can_export'          => false,
 			'supports'            => array( 'title', 'revisions' ),
 			'map_meta_cap'        => false,
 			'capabilities'        => array_fill_keys(
@@ -535,7 +539,7 @@ add_filter( 'wp_insert_post_data', 'slim_snippets_insert_data', 10, 3 );
 /**
  * Applies to every write (edit screen, WP-CLI, import, revisions): keep the
  * code and description exactly as written, pin the created date, and never
- * publish PHP that does not parse.
+ * make a snippet active.
  *
  * @param array $data        Slashed post data about to be saved.
  * @param array $postarr     Sanitized post array.
@@ -585,13 +589,13 @@ function slim_snippets_insert_data( $data, $postarr, $unsanitized ) {
 		$data['post_date_gmt'] = get_gmt_from_date( $data['post_date'] );
 	}
 
-	if ( 'publish' === $data['post_status'] ) {
-		$scope = isset( $postarr['meta_input']['_slim_snippets_scope'] )
-			? $postarr['meta_input']['_slim_snippets_scope']
-			: ( empty( $postarr['ID'] ) ? 'global' : slim_snippets_scope( $postarr['ID'] ) );
-		if ( slim_snippets_is_php( $scope ) && slim_snippets_lint( wp_unslash( $data['post_content'] ) ) ) {
-			$data['post_status'] = 'draft';
-		}
+	// Only slim_snippets_set_status(), after the activation checks, makes a
+	// snippet active. Any other write that would publish or schedule one (the
+	// WordPress importer, a revision restore, WP-CLI, another plugin calling
+	// wp_update_post()) saves it inactive instead, so new code never runs
+	// without the syntax check, the test run and the redeclare check.
+	if ( ! in_array( $data['post_status'], array( 'draft', 'trash', 'auto-draft' ), true ) ) {
+		$data['post_status'] = 'draft';
 	}
 
 	return $data;

@@ -2,6 +2,12 @@
 
 Every release, newest first. `readme.txt` lists only the current release.
 
+= 1.2.2 | 2026-11-25 =
+* Updated the plugin description to mention migrating from the Code Snippets plugin.
+* Updated the Safe mode description: the URL parameter works only for users who can manage snippets.
+* Fixed snippets becoming active without the activation checks when published another way (the WordPress importer, a revision restore, WP-CLI or another plugin). They are now saved inactive.
+* Removed snippets from Tools > Export. Use Snippets > Import / Export instead.
+
 = 1.2.1 | 2026-11-25 =
 * Updated `readme.txt` and `README.md` for clarity and consistency.
 * Updated the changelog so each entry starts with Added, Updated, Fixed or Removed, and each release shows its date.
