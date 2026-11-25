@@ -2,6 +2,13 @@
 
 Every release, newest first. `readme.txt` lists only the current release.
 
+= 1.2.4 | 2026-11-25 =
+* Fixed an active snippet that declares a function or class being left inactive, with a "Cannot redeclare" error, when it is saved again on the edit screen.
+* Fixed the migration not copying an active Code Snippets snippet when an inactive one with the same name and code was cleared. The active one is now the one copied, from the Active table.
+* Fixed the migration deactivating the Code Snippets plugin when none of the selected snippets could be migrated, for example because the snippets changed after the page loaded.
+* Fixed the migration page opening scrolled past its error when no snippets that can be migrated were selected.
+* Fixed a checked select-all checkbox showing above a migration table with no snippets to select.
+
 = 1.2.3 | 2026-11-25 =
 * Added checkboxes to the migration page, which now lists snippets in Active, Inactive and Trash tables. Only the selected snippets are copied.
 * Added a "view snippet" link, opening in a new tab, for each Code Snippets snippet that is not migrated.

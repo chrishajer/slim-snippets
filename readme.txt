@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.3
+Stable tag: 1.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,13 +106,11 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.2.3 | 2026-11-25 =
-* Added checkboxes to the migration page, which now lists snippets in Active, Inactive and Trash tables. Only the selected snippets are copied.
-* Added a "view snippet" link, opening in a new tab, for each Code Snippets snippet that is not migrated.
-* Updated the import and migration results to show each count and note on its own line, and to count snippets left inactive by an error separately.
-* Updated the migration page to say how to switch back safely: deactivate Slim Snippets first, then reactivate Code Snippets.
-* Updated the migration after testing with Code Snippets Pro 4.1.0: CSS and JavaScript snippets keep their status from Pro, and are copied inactive from the free plugin, which does not run them.
-* Updated the import page to offer only Inactive while the Code Snippets plugin is active.
-* Fixed a fatal error when a snippet activated while Code Snippets was active declared a function or class that one of its front-end snippets also declares.
+= 1.2.4 | 2026-11-25 =
+* Fixed an active snippet that declares a function or class being left inactive, with a "Cannot redeclare" error, when it is saved again on the edit screen.
+* Fixed the migration not copying an active Code Snippets snippet when an inactive one with the same name and code was cleared. The active one is now the one copied, from the Active table.
+* Fixed the migration deactivating the Code Snippets plugin when none of the selected snippets could be migrated, for example because the snippets changed after the page loaded.
+* Fixed the migration page opening scrolled past its error when no snippets that can be migrated were selected.
+* Fixed a checked select-all checkbox showing above a migration table with no snippets to select.
 
 Older versions are listed in `changelog.txt`.
