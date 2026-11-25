@@ -461,4 +461,22 @@ $check(
 	'not-migrated snippets flagged for review: ' . wp_json_encode( array_column( $review_plan, 'review' ) )
 );
 
+// 26. Active CSS and JavaScript snippets are copied inactive from the free
+// Code Snippets plugin, which never ran them, and active from Pro, which did.
+$asset_rows = array(
+	array_merge( $cs_row( 'cs css', 'body{}', 1 ), array( 'scope' => 'site-css' ) ),
+	array_merge( $cs_row( 'cs js', 'void 0;', 1 ), array( 'scope' => 'site-footer-js' ) ),
+	array_merge( $cs_row( 'cs css off', 'p{}', 0 ), array( 'scope' => 'admin-css' ) ),
+	$cs_row( 'cs php', '// php', 1 ),
+);
+$free_plan = slim_snippets_cs_plan( $asset_rows, false );
+$pro_plan  = slim_snippets_cs_plan( $asset_rows, true );
+$check(
+	array( 'inactive', 'inactive', 'inactive', 'active' ) === array_column( $free_plan, 'result' )
+	&& array( true, true, false, false ) === array_column( $free_plan, 'free_asset' )
+	&& array( 'active', 'active', 'inactive', 'active' ) === array_column( $pro_plan, 'result' )
+	&& ! array_filter( array_column( $pro_plan, 'free_asset' ) ),
+	'free Code Snippets CSS/JS copied inactive: ' . wp_json_encode( array( array_column( $free_plan, 'result' ), array_column( $pro_plan, 'result' ) ) )
+);
+
 echo $slim_fail ? "\n$slim_fail FAILED\n" : "\nALL PASSED\n";

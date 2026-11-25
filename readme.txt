@@ -53,7 +53,7 @@ If the Code Snippets plugin is active on the same site, Slim Snippets can migrat
 2. Review the list. It shows each Code Snippets snippet, its status in Code Snippets, and whether it will be migrated.
 3. Click the Migrate button. Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets.
 
-Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), and snippets that use a Code Snippets condition are not migrated. A snippet that is already in Slim Snippets (same name and code) is not copied again; if that copy is inactive and the snippet is active in Code Snippets, the copy is activated. Run-once snippets are copied inactive.
+Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), and snippets that use a Code Snippets condition are not migrated. A snippet that is already in Slim Snippets (same name and code) is not copied again; if that copy is inactive and the snippet is active in Code Snippets, the copy is activated. Run-once snippets are copied inactive, and so are CSS and JavaScript snippets from the free Code Snippets plugin, which does not run them.
 
 A copy with a syntax error, or one that declares a function or class that already exists, stays inactive and is named in the notice. The Code Snippets plugin and its snippets are not changed or deleted. To switch back, deactivate Slim Snippets first, then reactivate Code Snippets. If the Code Snippets plugin is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
 

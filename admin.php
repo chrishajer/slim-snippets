@@ -1087,11 +1087,16 @@ add_action(
  *                 'trash'), 'result' ('active', 'inactive' or 'skip'), 'note'
  *                 (why it is skipped, or ''), 'existing' (ID of the inactive
  *                 Slim Snippets copy to activate instead of copying again, or 0),
- *                 'id' (the snippet's ID in Code Snippets) and 'review' (true
+ *                 'id' (the snippet's ID in Code Snippets), 'review' (true
  *                 when the snippet is not migrated and its code would be lost
- *                 from view once Code Snippets is deactivated).
+ *                 from view once Code Snippets is deactivated) and 'free_asset'
+ *                 (true when it is an active CSS or JavaScript snippet that the
+ *                 free Code Snippets plugin never ran, so it is copied inactive).
+ *
+ * @param bool|null    $pro  Whether Code Snippets Pro is the plugin migrated from;
+ *                           null reads CODE_SNIPPETS_PRO.
  */
-function slim_snippets_cs_plan( $rows = null ) {
+function slim_snippets_cs_plan( $rows = null, $pro = null ) {
 	global $wpdb;
 	if ( null === $rows ) {
 		$table = $wpdb->prefix . 'snippets';
@@ -1118,12 +1123,16 @@ function slim_snippets_cs_plan( $rows = null ) {
 	}
 	// A network-active Code Snippets is not deactivated here, so nothing may be activated.
 	$can_activate = ! defined( 'CODE_SNIPPETS_FILE' ) || ! is_plugin_active_for_network( plugin_basename( CODE_SNIPPETS_FILE ) );
+	// CSS and JavaScript snippets are Pro features: the free plugin keeps them,
+	// but never runs them. Copying them active would start code that never ran.
+	$pro = null === $pro ? defined( 'CODE_SNIPPETS_PRO' ) && CODE_SNIPPETS_PRO : $pro;
 
 	$plan = array();
 	foreach ( (array) $rows as $row ) {
 		$name     = sanitize_text_field( $row['name'] );
 		$status   = (int) $row['active'] < 0 ? 'trash' : ( (int) $row['active'] ? 'active' : 'inactive' );
-		$active   = $can_activate && 'active' === $status && 'single-use' !== $row['scope'];
+		$free_css = ! $pro && 'active' === $status && isset( SLIM_SNIPPETS_OUTPUT_HOOKS[ $row['scope'] ] );
+		$active   = $can_activate && 'active' === $status && 'single-use' !== $row['scope'] && ! $free_css;
 		$key      = $key_of( $name, $row['code'] );
 		$dup      = isset( $have[ $key ] ) ? $have[ $key ] : null;
 		$note     = '';
@@ -1152,7 +1161,7 @@ function slim_snippets_cs_plan( $rows = null ) {
 			$have[ $key ] = count( $plan );
 		}
 		$plan[] = array(
-			'snippet'  => array(
+			'snippet'    => array(
 				'name'     => $name,
 				'desc'     => $row['description'],
 				'code'     => $row['code'],
@@ -1160,12 +1169,13 @@ function slim_snippets_cs_plan( $rows = null ) {
 				'scope'    => $row['scope'],
 				'priority' => $row['priority'],
 			),
-			'status'   => $status,
-			'result'   => $note ? 'skip' : ( $active ? 'active' : 'inactive' ),
-			'note'     => $note,
-			'existing' => $existing,
-			'id'       => isset( $row['id'] ) ? (int) $row['id'] : 0,
-			'review'   => $review,
+			'status'     => $status,
+			'result'     => $note ? 'skip' : ( $active ? 'active' : 'inactive' ),
+			'note'       => $note,
+			'existing'   => $existing,
+			'id'         => isset( $row['id'] ) ? (int) $row['id'] : 0,
+			'review'     => $review,
+			'free_asset' => $free_css && ! $note,
 		);
 	}
 	return $plan;
@@ -1222,14 +1232,22 @@ function slim_snippets_cs_section() {
 	);
 	$network = is_plugin_active_for_network( plugin_basename( CODE_SNIPPETS_FILE ) );
 	$review  = array_filter( array_column( $plan, 'review' ) );
+	$assets  = array_filter( array_column( $plan, 'free_asset' ) );
 	?>
 	<h2 id="migrate"><?php esc_html_e( 'Migrate from Code Snippets', 'slim-snippets' ); ?></h2>
 	<ul class="ul-disc">
 		<li><?php esc_html_e( 'The Code Snippets plugin is active on this site. Migrating copies its snippets into Slim Snippets and then deactivates Code Snippets, so the same snippets do not run in both plugins.', 'slim-snippets' ); ?></li>
-		<li><?php esc_html_e( 'Snippets that are active in Code Snippets are active in Slim Snippets after migrating. Run-once snippets are copied inactive.', 'slim-snippets' ); ?></li>
+		<li>
+			<?php
+			esc_html_e( 'Snippets that are active in Code Snippets are active in Slim Snippets after migrating. Run-once snippets are copied inactive.', 'slim-snippets' );
+			if ( $assets ) {
+				echo ' ' . esc_html__( 'CSS and JavaScript snippets are copied inactive too, because the free Code Snippets plugin does not run them.', 'slim-snippets' );
+			}
+			?>
+		</li>
 		<li><?php esc_html_e( 'The Code Snippets plugin and its snippets are not changed or deleted. To switch back, deactivate Slim Snippets first, then reactivate Code Snippets. With both plugins active, the same snippets run twice, and a snippet that declares a function or class causes a fatal error.', 'slim-snippets' ); ?></li>
 		<?php if ( $review && ! $network ) : ?>
-			<li><?php esc_html_e( 'Snippets with a "view snippet" link below are not migrated, so they stop running when the Code Snippets plugin is deactivated. Open each one to see what it does before you migrate.', 'slim-snippets' ); ?></li>
+			<li><?php esc_html_e( 'Snippets with a "view snippet" link below are not migrated. Once the Code Snippets plugin is deactivated, the active ones stop running and none of them can be viewed there. Open each one before you migrate.', 'slim-snippets' ); ?></li>
 		<?php endif; ?>
 		<?php if ( $network ) : ?>
 			<li><strong><?php esc_html_e( 'The Code Snippets plugin is network-activated, so it is not deactivated here and every snippet is copied inactive.', 'slim-snippets' ); ?></strong></li>
@@ -1276,6 +1294,8 @@ function slim_snippets_cs_section() {
 							}
 						} elseif ( $item['existing'] ) {
 							esc_html_e( 'Active (activates the copy already in Slim Snippets)', 'slim-snippets' );
+						} elseif ( $item['free_asset'] ) {
+							esc_html_e( 'Inactive (CSS and JavaScript snippets do not run in the free Code Snippets plugin)', 'slim-snippets' );
 						} else {
 							echo esc_html( $labels[ $item['result'] ] );
 						}
