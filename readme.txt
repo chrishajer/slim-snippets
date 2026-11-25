@@ -63,7 +63,7 @@ To move snippets from Code Snippets on another site, export them there and impor
 2. On this site, go to Snippets > Import / Export, upload the file, and choose the status after import.
 3. If you imported them inactive, activate the snippets you want, one at a time or with the Activate bulk action.
 
-If the Code Snippets plugin is already active on this site, use the migration above instead. Code Snippets runs its active snippets on every page load. An imported copy that declares a function or class cannot be activated, because PHP does not allow one to be declared twice. A copy that declares neither can be activated, but it then runs twice: once from Code Snippets and once from Slim Snippets.
+If the Code Snippets plugin is already active on this site, use the migration above instead. While it is active, every imported snippet is left inactive: Code Snippets is still running the originals, so an active copy would run twice, or cause a fatal error if it declares a function or class.
 
 Run-once snippets are always imported inactive, and snippets with unsupported scopes (shortcodes and HTML content) are skipped.
 

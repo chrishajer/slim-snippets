@@ -379,18 +379,31 @@ function slim_snippets_declarations( $code ) {
 
 /**
  * Whether the snippet declares a function or class that already exists, in
- * the code that is loaded or in any active snippet (an active front-end
- * snippet does not run on admin screens, so function_exists() alone would
- * miss it). Declaring it again is a fatal error that try/catch cannot stop.
+ * the code that is loaded, in any active snippet, or in an active snippet of
+ * an active Code Snippets plugin (an active front-end snippet does not run on
+ * admin screens, so function_exists() alone would miss it). Declaring it
+ * again is a fatal error that try/catch cannot stop.
  *
  * @param string $code Snippet code that parses.
  * @return string Error message, or '' when nothing is declared twice.
  */
 function slim_snippets_redeclared( $code ) {
+	global $wpdb;
 	$taken = array();
 	foreach ( (array) get_option( 'slim_snippets_active', array() ) as list( , $scope, $other ) ) {
 		if ( slim_snippets_is_php( $scope ) ) {
 			$taken += slim_snippets_declarations( $other );
+		}
+	}
+	// While Code Snippets is active it runs its own active snippets too, its
+	// front-end ones only on the front end, so a clash would not show here and
+	// would take the site down there.
+	if ( defined( 'CODE_SNIPPETS_FILE' ) ) {
+		$table = $wpdb->prefix . 'snippets';
+		if ( $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Code Snippets' own table.
+			foreach ( $wpdb->get_col( "SELECT code FROM {$table} WHERE active = 1 AND scope IN ( 'global', 'admin', 'front-end' )" ) as $other ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Code Snippets' own table, no input.
+				$taken += slim_snippets_declarations( $other );
+			}
 		}
 	}
 	foreach ( slim_snippets_declarations( $code ) as $key => $label ) {

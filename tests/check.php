@@ -487,4 +487,32 @@ $check(
 	'free Code Snippets CSS/JS copied inactive: ' . wp_json_encode( array( array_column( $free_plan, 'result' ), array_column( $pro_plan, 'result' ) ) )
 );
 
+// 27. While Code Snippets is active, an import activates nothing (the Trash is
+// still kept), and activation sees Code Snippets' active snippets, front-end
+// ones included, so a copy cannot redeclare one of their functions. This test
+// defines CODE_SNIPPETS_FILE, so it must stay last.
+$before             = $latest();
+list( $cs_counts ) = slim_snippets_import_files( array( array( 'snippets.json', $file ) ), 'keep', false );
+foreach ( get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => array( 'publish', 'draft', 'trash' ), 'numberposts' => -1, 'fields' => 'ids' ) ) as $new_id ) {
+	if ( $new_id > $before ) { // Only what this import made: never the site's own snippets.
+		$slim_made[] = $new_id;
+	}
+}
+global $wpdb;
+$cs_table = $wpdb->prefix . 'snippets';
+$cs_live  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $cs_table ) ) === $cs_table;
+if ( $cs_live ) {
+	defined( 'CODE_SNIPPETS_FILE' ) || define( 'CODE_SNIPPETS_FILE', WP_PLUGIN_DIR . '/code-snippets/code-snippets.php' );
+	$wpdb->insert( $cs_table, array( 'name' => 'slim check cs', 'description' => '', 'code' => 'function slim_check_cs_front() {}', 'tags' => '', 'scope' => 'front-end', 'priority' => 10, 'active' => 1 ) );
+	$cs_row_id = $wpdb->insert_id;
+	$cs_copy   = $make( 'function slim_check_cs_front() {}' );
+	$cs_result = slim_snippets_activate( $cs_copy );
+	$wpdb->delete( $cs_table, array( 'id' => $cs_row_id ) );
+}
+$check(
+	0 === $cs_counts['active'] && 0 === $cs_counts['failed'] && 1 === $cs_counts['trash']
+	&& ( ! $cs_live || ( 'error' === $cs_result[0] && false !== strpos( $cs_result[1], 'slim_check_cs_front()' ) ) ),
+	'Code Snippets active: import activates nothing, activation sees its snippets: ' . wp_json_encode( array( $cs_counts, $cs_live ? $cs_result : 'no Code Snippets table here' ) )
+);
+
 echo $slim_fail ? "\n$slim_fail FAILED\n" : "\nALL PASSED\n";
