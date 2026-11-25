@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.4
+Stable tag: 1.2.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,11 +106,8 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.2.4 | 2026-11-25 =
-* Fixed an active snippet that declares a function or class being left inactive, with a "Cannot redeclare" error, when it is saved again on the edit screen.
-* Fixed the migration not copying an active Code Snippets snippet when an inactive one with the same name and code was cleared. The active one is now the one copied, from the Active table.
-* Fixed the migration deactivating the Code Snippets plugin when none of the selected snippets could be migrated, for example because the snippets changed after the page loaded.
-* Fixed the migration page opening scrolled past its error when no snippets that can be migrated were selected.
-* Fixed a checked select-all checkbox showing above a migration table with no snippets to select.
+= 1.2.5 | 2026-11-25 =
+* Fixed a fatal error on multisite when a snippet activated while Code Snippets was active declared a function or class that a Code Snippets network snippet also declares.
+* Fixed the import page pointing to the site's Plugins screen to deactivate a network-activated Code Snippets plugin. It now links to the Network Admin Plugins screen.
 
 Older versions are listed in `changelog.txt`.

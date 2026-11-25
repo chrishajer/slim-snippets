@@ -2,6 +2,10 @@
 
 Every release, newest first. `readme.txt` lists only the current release.
 
+= 1.2.5 | 2026-11-25 =
+* Fixed a fatal error on multisite when a snippet activated while Code Snippets was active declared a function or class that a Code Snippets network snippet also declares.
+* Fixed the import page pointing to the site's Plugins screen to deactivate a network-activated Code Snippets plugin. It now links to the Network Admin Plugins screen.
+
 = 1.2.4 | 2026-11-25 =
 * Fixed an active snippet that declares a function or class being left inactive, with a "Cannot redeclare" error, when it is saved again on the edit screen.
 * Fixed the migration not copying an active Code Snippets snippet when an inactive one with the same name and code was cleared. The active one is now the one copied, from the Active table.
