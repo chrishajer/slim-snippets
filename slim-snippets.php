@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Slim Snippets
  * Plugin URI:        https://github.com/chrishajer/slim-snippets
- * Description:       Run PHP, CSS and JavaScript snippets without editing functions.php. Imports Code Snippets exports.
+ * Description:       Run PHP, CSS and JavaScript snippets without editing functions.php. Migrate from the Code Snippets plugin or import its exports.
  * Version:           1.2.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
