@@ -4,35 +4,38 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Run PHP, CSS and JavaScript snippets without editing functions.php. Small and fast, with no cloud, upsells or tracking.
+Run PHP, CSS and JavaScript snippets without editing functions.php. Lightweight and fast, with no cloud services, upsells or tracking.
 
 == Description ==
 
 Slim Snippets keeps the parts of a snippets plugin that matter day to day and leaves the rest out.
 
 * **PHP snippets** that run everywhere, only in the admin, only on the front end, or once.
-* **CSS and JavaScript snippets.** CSS is printed in the front-end head or the admin head. JavaScript is printed in the front-end head or footer.
-* **Syntax-highlighting editor** (the CodeMirror editor built into WordPress). The mode follows the snippet's scope.
-* **No activation with errors.** PHP is syntax-checked and test-run before it is activated. If it throws an error, dies with a fatal error, or declares a function or class that already exists, it stays inactive and the error is shown. If an active snippet throws an error on a later page load, the error is recorded and shown on the snippet, and the snippet stays active.
-* **Fast.** Active snippets are stored in one autoloaded option, so running them adds no database queries.
+* **CSS and JavaScript snippets.** CSS is added to the front-end or admin head. JavaScript is added to the front-end head or footer.
 * **Priority.** Lower numbers run first.
+* **Syntax-highlighting editor** (the CodeMirror editor built into WordPress). The mode follows the snippet's scope.
+* **Activation checks.** PHP is syntax-checked and test-run before it is activated. If it throws an error, dies with a fatal error, or declares a function or class that already exists, it stays inactive and the error is shown.
+* **Errors after activation.** If an active snippet throws an error on a later page load, the error is recorded and shown on the snippet. The snippet stays active, so a visitor cannot switch it off by making it fail.
+* **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in `wp-config.php`, or stop them for your own requests only by adding `?slim-snippets-safe-mode=1` to any URL while logged in.
+* **Fast.** Active snippets are stored in one autoloaded option, so running them adds no database queries.
 * **Title, code, description and tags** for each snippet.
-* **List views:** All, Active, Inactive, Recently Active (deactivated in the last 7 days) and Trash.
+* **List views:** All, Active, Inactive, Recently Active (snippets deactivated in the last 7 days) and Trash.
 * **Sorting** by name, created date, modified date, ID or priority, ascending or descending.
 * **Search** across the name, code, description and tags.
 * **Revisions** of the code, title and description.
 * **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction. Import several files at once, and choose whether the snippets arrive inactive (the default), keep the status from the file, or are all activated.
 * **Migrate from Code Snippets** on the same site with one click: review what will be copied, then Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
 * **Updates from GitHub.** New releases show on the Plugins and Updates screens like other plugin updates, and auto-updates can be turned on.
-* **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in wp-config.php, or stop them for your own requests only by adding `?slim-snippets-safe-mode=1` to any URL while logged in.
 
 No custom database tables. Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
 
-Only administrators can manage snippets. On multisite, only super admins can, because snippets run PHP. If wp-config.php sets `DISALLOW_UNFILTERED_HTML` to true, nobody can manage snippets: that setting stops even administrators from adding their own JavaScript, and snippets add JavaScript and PHP. Snippets that are already active keep running.
+Only administrators can manage snippets. On multisite, only super admins can, because snippets run PHP.
+
+If `wp-config.php` sets `DISALLOW_UNFILTERED_HTML` to true, nobody can manage snippets. That setting stops even administrators from adding their own JavaScript, and snippets add JavaScript and PHP. Snippets that are already active keep running.
 
 == Installation ==
 
@@ -50,7 +53,9 @@ If the Code Snippets plugin is active on the same site, Slim Snippets can migrat
 2. Review the list. It shows each Code Snippets snippet, its status in Code Snippets, and whether it will be migrated.
 3. Click the Migrate button. Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets.
 
-Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), and snippets that use a Code Snippets condition are not migrated. A snippet that is already in Slim Snippets (same name and code) is not copied again; if that copy is inactive and the snippet is active in Code Snippets, the copy is activated. Run-once snippets are copied inactive. A copy with a syntax error, or one that declares a function or class that already exists, stays inactive and is named in the notice. The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it. If the Code Snippets plugin is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
+Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), and snippets that use a Code Snippets condition are not migrated. A snippet that is already in Slim Snippets (same name and code) is not copied again; if that copy is inactive and the snippet is active in Code Snippets, the copy is activated. Run-once snippets are copied inactive.
+
+A copy with a syntax error, or one that declares a function or class that already exists, stays inactive and is named in the notice. The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it. If the Code Snippets plugin is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
 
 To move snippets from Code Snippets on another site, export them there and import the file:
 
@@ -66,11 +71,11 @@ Code Snippets stores descriptions as HTML. On import they become plain text: par
 
 = A snippet broke my site. What now? =
 
-Add `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` to wp-config.php, fix or deactivate the snippet, then remove the line. On a single site, WordPress's recovery mode email also lets you log in with Slim Snippets paused.
+Add `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` to `wp-config.php`, fix or deactivate the snippet, then remove the line. On a single site, WordPress's recovery mode email also lets you log in with Slim Snippets paused.
 
 = How do I get updates? =
 
-Slim Snippets updates from its releases on GitHub, not from WordPress.org. A new release shows on the Plugins and Updates screens like other plugin updates, and you can turn on auto-updates for it. WordPress checks every 12 hours; to check now, click Check again on Dashboard > Updates. Update checks go to api.github.com and raw.githubusercontent.com (for the release's readme.txt, which says which WordPress and PHP versions it works with) and do not include your site's address. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
+Slim Snippets updates from its releases on GitHub, not from WordPress.org. A new release shows on the Plugins and Updates screens like other plugin updates, and you can turn on auto-updates for it. WordPress checks every 12 hours; to check now, click Check again on Dashboard > Updates. Update checks go to api.github.com and raw.githubusercontent.com (for the release's `readme.txt`, which says which WordPress and PHP versions it works with) and do not include your site's address. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
 
 Versions before 1.2.0 cannot update themselves. Install 1.2.0 from GitHub once, and later releases arrive as updates.
 
@@ -101,7 +106,8 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.2.0 =
-* Updates from GitHub. New releases show on the Plugins and Updates screens like other plugin updates, View details shows the release notes, and auto-updates can be turned on.
+= 1.2.1 | 2026-11-25 =
+* Updated `readme.txt` and `README.md` for clarity and consistency.
+* Updated the changelog so each entry starts with Added, Updated, Fixed or Removed, and each release shows its date.
 
-Older versions are listed in changelog.txt.
+Older versions are listed in `changelog.txt`.
