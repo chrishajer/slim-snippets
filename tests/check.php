@@ -16,15 +16,15 @@
 require_once dirname( SLIM_SNIPPETS_FILE ) . '/admin.php';
 
 $slim_made    = array();
-$slim_cs_rows = array(); // Rows added to the site's Code Snippets table.
+$slim_cs_rows = array(); // Rows added to Code Snippets' tables: array( table, id ).
 $slim_fail    = 0;
 
 // Delete everything this script made, even if a check dies with a fatal error.
 register_shutdown_function(
 	function () use ( &$slim_made, &$slim_cs_rows ) {
 		global $wpdb;
-		foreach ( $slim_cs_rows as $id ) {
-			$wpdb->delete( $wpdb->prefix . 'snippets', array( 'id' => $id ) );
+		foreach ( $slim_cs_rows as list( $table, $id ) ) {
+			$wpdb->delete( $table, array( 'id' => $id ) );
 		}
 		foreach ( $slim_made as $id ) {
 			wp_delete_post( $id, true );
@@ -513,8 +513,10 @@ $check(
 
 // 28. While Code Snippets is active, an import activates nothing (the Trash is
 // still kept), and activation sees Code Snippets' active snippets, front-end
-// ones included, so a copy cannot redeclare one of their functions. This test
-// defines CODE_SNIPPETS_FILE, so it must stay last.
+// ones included, so a copy cannot redeclare one of their functions. On
+// multisite that includes network snippets that are active everywhere or
+// shared and activated on this site, but not other network snippets. This
+// test defines CODE_SNIPPETS_FILE, so it must stay last.
 $before             = $latest();
 list( $cs_counts ) = slim_snippets_import_files( array( array( 'snippets.json', $file ) ), 'keep', false );
 foreach ( get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => array( 'publish', 'draft', 'trash' ), 'numberposts' => -1, 'fields' => 'ids' ) ) as $new_id ) {
@@ -524,11 +526,20 @@ foreach ( get_posts( array( 'post_type' => 'slim_snippet', 'post_status' => arra
 }
 global $wpdb;
 $cs_table = $wpdb->prefix . 'snippets';
-$cs_live  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $cs_table ) ) === $cs_table;
-if ( $cs_live ) {
+$cs_live  = slim_snippets_table_exists( $cs_table );
+$ms_table = $wpdb->base_prefix . 'ms_snippets';
+$ms_live  = is_multisite() && slim_snippets_table_exists( $ms_table );
+if ( $cs_live || $ms_live ) {
 	defined( 'CODE_SNIPPETS_FILE' ) || define( 'CODE_SNIPPETS_FILE', WP_PLUGIN_DIR . '/code-snippets/code-snippets.php' );
-	$wpdb->insert( $cs_table, array( 'name' => 'slim check cs', 'description' => '', 'code' => 'function slim_check_cs_front() {}', 'tags' => '', 'scope' => 'front-end', 'priority' => 10, 'active' => 1 ) );
-	$slim_cs_rows[] = $wpdb->insert_id;
+}
+$cs_insert = function ( $table, $code, $active ) use ( &$slim_cs_rows ) {
+	global $wpdb;
+	$wpdb->insert( $table, array( 'name' => 'slim check cs', 'description' => '', 'code' => $code, 'tags' => '', 'scope' => 'front-end', 'priority' => 10, 'active' => $active ) );
+	$slim_cs_rows[] = array( $table, $wpdb->insert_id );
+	return $wpdb->insert_id;
+};
+if ( $cs_live ) {
+	$cs_insert( $cs_table, 'function slim_check_cs_front() {}', 1 );
 	$cs_copy        = $make( 'function slim_check_cs_front() {}' );
 	$cs_result      = slim_snippets_activate( $cs_copy );
 }
@@ -537,5 +548,18 @@ $check(
 	&& ( ! $cs_live || ( 'error' === $cs_result[0] && false !== strpos( $cs_result[1], 'slim_check_cs_front()' ) ) ),
 	'Code Snippets active: import activates nothing, activation sees its snippets: ' . wp_json_encode( array( $cs_counts, $cs_live ? $cs_result : 'no Code Snippets table here' ) )
 );
+if ( $ms_live ) {
+	$cs_insert( $ms_table, 'function slim_check_ms_network() {}', 1 );
+	$ms_shared = $cs_insert( $ms_table, 'function slim_check_ms_shared() {}', 0 );
+	$cs_insert( $ms_table, 'function slim_check_ms_off() {}', 0 );
+	$ms_option = fn() => array( $ms_shared ); // This site activated the shared one only.
+	add_filter( 'pre_option_active_shared_network_snippets', $ms_option );
+	$ms_result = array_map( 'slim_snippets_redeclared', array( 'function slim_check_ms_network() {}', 'function slim_check_ms_shared() {}', 'function slim_check_ms_off() {}' ) );
+	remove_filter( 'pre_option_active_shared_network_snippets', $ms_option );
+	$check(
+		'' !== $ms_result[0] && '' !== $ms_result[1] && '' === $ms_result[2],
+		'multisite: activation sees active and shared network snippets: ' . wp_json_encode( $ms_result )
+	);
+}
 
 echo $slim_fail ? "\n$slim_fail FAILED\n" : "\nALL PASSED\n";

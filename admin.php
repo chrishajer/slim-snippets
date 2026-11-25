@@ -1018,14 +1018,23 @@ function slim_snippets_import_page() {
 					?>
 					<div class="notice notice-warning inline"><p>
 						<?php
-						echo wp_kses_post(
-							sprintf(
+						// A network-activated plugin can only be deactivated in the Network
+						// Admin, and migrating does not deactivate it.
+						if ( is_plugin_active_for_network( plugin_basename( CODE_SNIPPETS_FILE ) ) ) {
+							$warning = sprintf(
+								/* translators: %s: link to the Network Admin Plugins screen */
+								__( 'The Code Snippets plugin is network-activated, so snippets can only be imported inactive. To keep their status or activate them, deactivate Code Snippets on the %s first.', 'slim-snippets' ),
+								'<a href="' . esc_url( network_admin_url( 'plugins.php' ) ) . '">' . esc_html__( 'Network Admin Plugins screen', 'slim-snippets' ) . '</a>'
+							);
+						} else {
+							$warning = sprintf(
 								/* translators: 1: link to the Plugins screen, 2: link to the Migrate from Code Snippets section */
 								__( 'The Code Snippets plugin is active, so snippets can only be imported inactive. To keep their status or activate them, deactivate Code Snippets on the %1$s first, or use %2$s at the top of this page.', 'slim-snippets' ),
 								'<a href="' . esc_url( admin_url( 'plugins.php' ) ) . '">' . esc_html__( 'Plugins screen', 'slim-snippets' ) . '</a>',
 								'<a href="#migrate">' . esc_html__( 'Migrate from Code Snippets', 'slim-snippets' ) . '</a>'
-							)
-						);
+							);
+						}
+						echo wp_kses_post( $warning );
 						?>
 					</p></div>
 				<?php endif; ?>
@@ -1141,7 +1150,7 @@ function slim_snippets_cs_plan( $rows = null, $pro = null ) {
 	global $wpdb;
 	if ( null === $rows ) {
 		$table = $wpdb->prefix . 'snippets';
-		if ( ! defined( 'CODE_SNIPPETS_FILE' ) || $table !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Checks Code Snippets' own table exists.
+		if ( ! defined( 'CODE_SNIPPETS_FILE' ) || ! slim_snippets_table_exists( $table ) ) {
 			return array();
 		}
 		$rows = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}snippets ORDER BY priority, id", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Code Snippets' own table, no input.
