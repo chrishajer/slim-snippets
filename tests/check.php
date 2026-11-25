@@ -15,12 +15,17 @@
 
 require_once dirname( SLIM_SNIPPETS_FILE ) . '/admin.php';
 
-$slim_made = array();
-$slim_fail = 0;
+$slim_made    = array();
+$slim_cs_rows = array(); // Rows added to the site's Code Snippets table.
+$slim_fail    = 0;
 
 // Delete everything this script made, even if a check dies with a fatal error.
 register_shutdown_function(
-	function () use ( &$slim_made ) {
+	function () use ( &$slim_made, &$slim_cs_rows ) {
+		global $wpdb;
+		foreach ( $slim_cs_rows as $id ) {
+			$wpdb->delete( $wpdb->prefix . 'snippets', array( 'id' => $id ) );
+		}
 		foreach ( $slim_made as $id ) {
 			wp_delete_post( $id, true );
 		}
@@ -322,7 +327,8 @@ $check(
 );
 
 // 21. Code Snippets migration: an inactive copy already here is activated, not
-// skipped; duplicates in Code Snippets are copied once (active if either is);
+// skipped; duplicates in Code Snippets are copied once, from the active one
+// if either is, so it has the checkbox in the Active table;
 // copies that redeclare an active snippet or an earlier copy stay inactive.
 $cs_row = function ( $name, $code, $active ) {
 	return array( 'name' => $name, 'description' => '', 'code' => $code, 'tags' => '', 'scope' => 'global', 'priority' => 10, 'active' => $active, 'condition_id' => 0 );
@@ -342,7 +348,7 @@ $plan = slim_snippets_cs_plan(
 );
 $check(
 	$cs_old === $plan[0]['existing'] && 'active' === $plan[0]['result']
-	&& 'active' === $plan[1]['result'] && 'skip' === $plan[2]['result']
+	&& 'skip' === $plan[1]['result'] && 'active' === $plan[2]['result']
 	&& 'skip' === $plan[3]['result'] && 'already in Slim Snippets' === $plan[3]['note']
 	&& 0 < $plan[4]['existing'],
 	'migration plan: ' . wp_json_encode( array_map( fn( $i ) => array( $i['result'], $i['note'], $i['existing'] ), $plan ) )
@@ -487,7 +493,25 @@ $check(
 	'free Code Snippets CSS/JS copied inactive: ' . wp_json_encode( array( array_column( $free_plan, 'result' ), array_column( $pro_plan, 'result' ) ) )
 );
 
-// 27. While Code Snippets is active, an import activates nothing (the Trash is
+// 27. Saving an active snippet that declares a function on the edit screen
+// keeps it active. The save writes it inactive and activates it again before
+// the index is rebuilt, so its own entry there is not a clash.
+$resave = $make( 'function slim_check_resave() {}' );
+slim_snippets_set_status( $resave, 'publish' ); // Indexed without running, as on the edit screen, where the runner skips it.
+$_POST  = array(
+	'slim_snippets_nonce'  => wp_create_nonce( 'slim_snippets_save' ),
+	'post_ID'              => $resave,
+	'slim_snippets_action' => 'save',
+	'slim_snippets_scope'  => 'global',
+);
+wp_update_post( array( 'ID' => $resave, 'post_title' => 'slim check resaved' ) );
+$_POST = array();
+$check(
+	'publish' === get_post_status( $resave ) && $in_index( $resave ) && ! get_post_meta( $resave, '_slim_snippets_error', true ),
+	'saving an active snippet that declares a function keeps it active: ' . wp_json_encode( array( get_post_status( $resave ), get_post_meta( $resave, '_slim_snippets_error', true ) ) )
+);
+
+// 28. While Code Snippets is active, an import activates nothing (the Trash is
 // still kept), and activation sees Code Snippets' active snippets, front-end
 // ones included, so a copy cannot redeclare one of their functions. This test
 // defines CODE_SNIPPETS_FILE, so it must stay last.
@@ -504,10 +528,9 @@ $cs_live  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $cs_table ) )
 if ( $cs_live ) {
 	defined( 'CODE_SNIPPETS_FILE' ) || define( 'CODE_SNIPPETS_FILE', WP_PLUGIN_DIR . '/code-snippets/code-snippets.php' );
 	$wpdb->insert( $cs_table, array( 'name' => 'slim check cs', 'description' => '', 'code' => 'function slim_check_cs_front() {}', 'tags' => '', 'scope' => 'front-end', 'priority' => 10, 'active' => 1 ) );
-	$cs_row_id = $wpdb->insert_id;
-	$cs_copy   = $make( 'function slim_check_cs_front() {}' );
-	$cs_result = slim_snippets_activate( $cs_copy );
-	$wpdb->delete( $cs_table, array( 'id' => $cs_row_id ) );
+	$slim_cs_rows[] = $wpdb->insert_id;
+	$cs_copy        = $make( 'function slim_check_cs_front() {}' );
+	$cs_result      = slim_snippets_activate( $cs_copy );
 }
 $check(
 	0 === $cs_counts['active'] && 0 === $cs_counts['failed'] && 1 === $cs_counts['trash']

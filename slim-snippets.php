@@ -3,7 +3,7 @@
  * Plugin Name:       Slim Snippets
  * Plugin URI:        https://github.com/chrishajer/slim-snippets
  * Description:       Run PHP, CSS and JavaScript snippets without editing functions.php. Migrate from the Code Snippets plugin or import its exports.
- * Version:           1.2.3
+ * Version:           1.2.4
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Chris Hajer
@@ -22,7 +22,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SLIM_SNIPPETS_VERSION', '1.2.3' );
+define( 'SLIM_SNIPPETS_VERSION', '1.2.4' );
 define( 'SLIM_SNIPPETS_FILE', __FILE__ );
 
 /**
@@ -385,13 +385,16 @@ function slim_snippets_declarations( $code ) {
  * again is a fatal error that try/catch cannot stop.
  *
  * @param string $code Snippet code that parses.
+ * @param int    $id   The snippet being activated. Its own entry in the index
+ *                     is skipped: saving an active snippet on the edit screen
+ *                     activates it again before the index is rebuilt.
  * @return string Error message, or '' when nothing is declared twice.
  */
-function slim_snippets_redeclared( $code ) {
+function slim_snippets_redeclared( $code, $id = 0 ) {
 	global $wpdb;
 	$taken = array();
-	foreach ( (array) get_option( 'slim_snippets_active', array() ) as list( , $scope, $other ) ) {
-		if ( slim_snippets_is_php( $scope ) ) {
+	foreach ( (array) get_option( 'slim_snippets_active', array() ) as list( $other_id, $scope, $other ) ) {
+		if ( (int) $other_id !== (int) $id && slim_snippets_is_php( $scope ) ) {
 			$taken += slim_snippets_declarations( $other );
 		}
 	}
@@ -441,7 +444,7 @@ function slim_snippets_activate( $id ) {
 	$scope = slim_snippets_scope( $id );
 	if ( slim_snippets_is_php( $scope ) ) {
 		$message = slim_snippets_lint( $post->post_content );
-		$message = $message ? $message : slim_snippets_redeclared( $post->post_content );
+		$message = $message ? $message : slim_snippets_redeclared( $post->post_content, $id );
 		$output  = '';
 		if ( ! $message ) {
 			static $shutdown = false;

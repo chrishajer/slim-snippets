@@ -1190,9 +1190,15 @@ function slim_snippets_cs_plan( $rows = null, $pro = null ) {
 			$note   = __( 'uses a Code Snippets condition, which is not supported', 'slim-snippets' );
 			$review = true;
 		} elseif ( is_int( $dup ) ) {
-			$note = __( 'duplicate of another Code Snippets snippet with the same name and code', 'slim-snippets' );
-			if ( $active && 'single-use' !== $plan[ $dup ]['snippet']['scope'] ) {
-				$plan[ $dup ]['result'] = 'active';
+			$twin = __( 'duplicate of another Code Snippets snippet with the same name and code', 'slim-snippets' );
+			if ( $active && 'active' !== $plan[ $dup ]['result'] ) {
+				// Copy the active one, so it is the one listed in the Active
+				// table with a checkbox, and skip the earlier inactive one.
+				$plan[ $dup ]['result']     = 'skip';
+				$plan[ $dup ]['note']       = $twin;
+				$plan[ $dup ]['free_asset'] = false;
+			} else {
+				$note = $twin;
 			}
 		} elseif ( $dup && $active && 'draft' === $dup->post_status ) {
 			$existing = $dup->ID; // Inactive copy, from an earlier import: activate it, or this snippet runs nowhere.
@@ -1321,7 +1327,8 @@ function slim_snippets_cs_section() {
 			if ( ! $items ) {
 				continue;
 			}
-			$pick = 'trash' !== $status;
+			// Only tables with a snippet that can be migrated get checkboxes.
+			$pick = 'trash' !== $status && array_filter( $items, fn( $item ) => 'skip' !== $item['result'] );
 			?>
 			<h3>
 				<?php
@@ -1425,19 +1432,22 @@ add_action(
 			wp_safe_redirect( $back );
 			exit;
 		}
-		// Code Snippets IDs of the snippets checked on the migrate form. Nothing
-		// checked is most likely a mistake: change nothing, and say so.
+		// Code Snippets IDs of the snippets checked on the migrate form. If none
+		// of them can be migrated now (nothing was checked, or the snippets
+		// changed since the page loaded), change nothing, and say so.
 		$selected = isset( $_POST['slim_snippets_cs'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['slim_snippets_cs'] ) ) : array();
-		if ( ! $selected ) {
-			slim_snippets_notice( 'error', __( 'No snippets were selected, so nothing was migrated and the Code Snippets plugin is still active.', 'slim-snippets' ) );
-			wp_safe_redirect( admin_url( 'edit.php?post_type=slim_snippet&page=slim-snippets-import#migrate' ) );
+		$plan     = slim_snippets_cs_plan();
+		if ( ! array_filter( $plan, fn( $item ) => 'skip' !== $item['result'] && in_array( $item['id'], $selected, true ) ) ) {
+			slim_snippets_notice( 'error', __( 'No snippets that can be migrated were selected, so nothing was migrated and the Code Snippets plugin is still active.', 'slim-snippets' ) );
+			// No #migrate: the notice is above that heading, at the top of the page.
+			wp_safe_redirect( admin_url( 'edit.php?post_type=slim_snippet&page=slim-snippets-import' ) );
 			exit;
 		}
 
 		$counts = array_fill_keys( array( 'active', 'inactive', 'failed', 'trash', 'skipped', 'unselected' ), 0 );
 		$notes  = array();
 		$queue  = array();
-		foreach ( slim_snippets_cs_plan() as $item ) {
+		foreach ( $plan as $item ) {
 			// Trashed snippets are only counted; listing them would bury the notes that matter.
 			if ( 'trash' === $item['status'] ) {
 				++$counts['trash'];
