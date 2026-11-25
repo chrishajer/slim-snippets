@@ -431,7 +431,8 @@ $check(
 );
 
 // 24. A notice's items are shown as an escaped bulleted list, between the
-// message and the preformatted detail.
+// message and the preformatted detail; a list-type detail (import and
+// migration notes) is a second bulleted list.
 require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
 require_once ABSPATH . 'wp-admin/includes/screen.php';
 set_current_screen( 'edit-slim_snippet' );
@@ -440,9 +441,14 @@ slim_snippets_notice( 'warning', 'Migrated 3 snippets from Code Snippets:', 'not
 ob_start();
 slim_snippets_admin_notices();
 $notice_html = ob_get_clean();
+slim_snippets_notice( 'warning', 'Imported 2 snippets:', array( '"a": note <i>', '"b": other' ), array( '1 active' ) );
+ob_start();
+slim_snippets_admin_notices();
+$notes_html = ob_get_clean();
 $check(
-	false !== strpos( $notice_html, '<p>Migrated 3 snippets from Code Snippets:</p><ul class="ul-disc"><li>2 active</li><li>1 &lt;inactive&gt;</li></ul><pre style="white-space:pre-wrap">note &lt;b&gt;</pre>' ),
-	'notice items render as a bulleted list: ' . trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $notice_html ) ) )
+	false !== strpos( $notice_html, '<p>Migrated 3 snippets from Code Snippets:</p><ul class="ul-disc"><li>2 active</li><li>1 &lt;inactive&gt;</li></ul><pre style="white-space:pre-wrap">note &lt;b&gt;</pre>' )
+	&& false !== strpos( $notes_html, '<p>Imported 2 snippets:</p><ul class="ul-disc"><li>1 active</li></ul><ul class="ul-disc"><li>&quot;a&quot;: note &lt;i&gt;</li><li>&quot;b&quot;: other</li></ul></div>' ),
+	'notice items and notes render as bulleted lists: ' . trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $notes_html ) ) )
 );
 
 // 25. Code Snippets snippets that are not migrated because they are trashed,

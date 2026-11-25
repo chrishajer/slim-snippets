@@ -53,10 +53,12 @@ function slim_snippets_is_screen() {
 /**
  * Queue a notice for the current user's next snippets screen.
  *
- * @param string   $type    success, error, warning or info.
- * @param string   $message Message text.
- * @param string   $detail  Optional preformatted text, such as a snippet's output.
- * @param string[] $items   Optional lines shown as a bulleted list after the message.
+ * @param string          $type    success, error, warning or info.
+ * @param string          $message Message text.
+ * @param string|string[] $detail  Optional detail after the items: a string is
+ *                                 shown preformatted (a snippet's output), a
+ *                                 list of lines as a bulleted list (import notes).
+ * @param string[]        $items   Optional lines shown as a bulleted list after the message.
  */
 function slim_snippets_notice( $type, $message, $detail = '', $items = array() ) {
 	$key       = 'slim_snippets_notices_' . get_current_user_id();
@@ -141,14 +143,19 @@ function slim_snippets_admin_notices() {
 	foreach ( $notices as $notice ) {
 		list( $type, $message, $detail, $items ) = array_pad( $notice, 4, array() );
 		printf( '<div class="notice notice-%s is-dismissible"><p>%s</p>', esc_attr( $type ), esc_html( $message ) );
-		if ( $items ) {
-			echo '<ul class="ul-disc">';
-			foreach ( $items as $item ) {
-				printf( '<li>%s</li>', esc_html( $item ) );
+		// The items, then a list-type detail (import and migration notes), as
+		// bulleted lists. A string detail, such as a snippet's output, stays
+		// preformatted.
+		foreach ( array( $items, is_array( $detail ) ? $detail : array() ) as $list ) {
+			if ( $list ) {
+				echo '<ul class="ul-disc">';
+				foreach ( $list as $line ) {
+					printf( '<li>%s</li>', esc_html( $line ) );
+				}
+				echo '</ul>';
 			}
-			echo '</ul>';
 		}
-		if ( '' !== $detail ) {
+		if ( is_string( $detail ) && '' !== $detail ) {
 			printf( '<pre style="white-space:pre-wrap">%s</pre>', esc_html( $detail ) );
 		}
 		echo '</div>';
@@ -1065,7 +1072,7 @@ add_action(
 			$notes ? 'warning' : 'success',
 			/* translators: %d: number of snippets */
 			sprintf( _n( 'Imported %d snippet:', 'Imported %d snippets:', $total, 'slim-snippets' ), $total ),
-			implode( "\n", $notes ),
+			$notes,
 			$items
 		);
 		wp_safe_redirect( admin_url( 'edit.php?post_type=slim_snippet' ) );
@@ -1474,7 +1481,7 @@ add_action(
 			$notes ? 'warning' : 'success',
 			/* translators: %d: number of snippets */
 			sprintf( _n( 'Migrated %d snippet from Code Snippets:', 'Migrated %d snippets from Code Snippets:', $total, 'slim-snippets' ), $total ),
-			implode( "\n", array_filter( $notes ) ),
+			array_values( array_filter( $notes ) ),
 			$items
 		);
 		wp_safe_redirect( $back );
