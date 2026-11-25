@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,14 +98,12 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.1.0 =
-* A snippet that throws an error while loading stays active and the error is recorded. Before, it deactivated itself, so a visitor who could make a snippet fail (for example with an unexpected URL parameter) could switch it off.
-* If `DISALLOW_UNFILTERED_HTML` is true, nobody can manage snippets. Snippets that are already active keep running.
-* A search term with "$" or "\" finds tags as typed.
-* Migrating from Code Snippets activates a snippet's inactive copy that is already in Slim Snippets (for example from an earlier import), instead of skipping it. Matching ignores line endings.
-* Duplicate snippets in Code Snippets are copied once, and the copy is active if any of them was active.
-* A copy that declares a function or class that an active snippet or an earlier copy already declares stays inactive, with a note, instead of causing a fatal error.
-* Code Snippets is deactivated only after every copy is checked, and the copies are then activated together, so the time with neither plugin running is as short as possible.
-* The migration notice and section are shown only to users who can activate plugins. A missing Code Snippets table no longer shows a database error.
+= 1.1.1 =
+* Import notes name the file that is not a snippets export or that has a snippet that is not valid.
+* The safe mode notice says how to turn safe mode off: a link when it was turned on with the URL parameter, or which wp-config.php line to remove.
+* The Import / Export page explains that while the Code Snippets plugin is active, an imported copy that declares a function or class cannot be activated, and a copy that declares neither would run twice.
+* Clearer wording on the Import / Export page and the migration screens, including "the Code Snippets plugin" where the plugin itself is meant.
+* "Snippet not found." can be translated.
+* Older changelog entries moved from readme.txt to changelog.txt.
 
 Older versions are listed in changelog.txt.
