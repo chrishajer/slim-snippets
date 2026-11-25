@@ -53,15 +53,16 @@ function slim_snippets_is_screen() {
 /**
  * Queue a notice for the current user's next snippets screen.
  *
- * @param string $type    success, error, warning or info.
- * @param string $message Message text.
- * @param string $detail  Optional preformatted text, such as a snippet's output.
+ * @param string   $type    success, error, warning or info.
+ * @param string   $message Message text.
+ * @param string   $detail  Optional preformatted text, such as a snippet's output.
+ * @param string[] $items   Optional lines shown as a bulleted list after the message.
  */
-function slim_snippets_notice( $type, $message, $detail = '' ) {
+function slim_snippets_notice( $type, $message, $detail = '', $items = array() ) {
 	$key       = 'slim_snippets_notices_' . get_current_user_id();
 	$notices   = get_transient( $key );
 	$notices   = is_array( $notices ) ? $notices : array();
-	$notices[] = array( $type, $message, $detail );
+	$notices[] = array( $type, $message, $detail, $items );
 	set_transient( $key, $notices, HOUR_IN_SECONDS );
 }
 
@@ -137,8 +138,16 @@ function slim_snippets_admin_notices() {
 	}
 	delete_transient( $key );
 
-	foreach ( $notices as list( $type, $message, $detail ) ) {
+	foreach ( $notices as $notice ) {
+		list( $type, $message, $detail, $items ) = array_pad( $notice, 4, array() );
 		printf( '<div class="notice notice-%s is-dismissible"><p>%s</p>', esc_attr( $type ), esc_html( $message ) );
+		if ( $items ) {
+			echo '<ul class="ul-disc">';
+			foreach ( $items as $item ) {
+				printf( '<li>%s</li>', esc_html( $item ) );
+			}
+			echo '</ul>';
+		}
 		if ( '' !== $detail ) {
 			printf( '<pre style="white-space:pre-wrap">%s</pre>', esc_html( $detail ) );
 		}
@@ -1324,28 +1333,29 @@ add_action(
 		slim_snippets_rebuild();
 
 		$total = $counts['active'] + $counts['inactive'];
-		$not   = array();
+		$items = array(
+			/* translators: %d: number of snippets */
+			sprintf( _n( '%d active', '%d active', $counts['active'], 'slim-snippets' ), $counts['active'] ),
+			/* translators: %d: number of snippets */
+			sprintf( _n( '%d inactive', '%d inactive', $counts['inactive'], 'slim-snippets' ), $counts['inactive'] ),
+		);
 		if ( $counts['trash'] ) {
 			/* translators: %d: number of snippets */
-			$not[] = sprintf( __( '%d in the Code Snippets Trash', 'slim-snippets' ), $counts['trash'] );
+			$items[] = sprintf( _n( '%d not migrated because it is in the Code Snippets Trash', '%d not migrated because they are in the Code Snippets Trash', $counts['trash'], 'slim-snippets' ), $counts['trash'] );
 		}
 		if ( $counts['skipped'] ) {
 			/* translators: %d: number of snippets */
-			$not[] = sprintf( __( '%d listed below', 'slim-snippets' ), $counts['skipped'] );
+			$items[] = sprintf( _n( '%d not migrated, listed below', '%d not migrated, listed below', $counts['skipped'], 'slim-snippets' ), $counts['skipped'] );
+		}
+		if ( ! is_plugin_active( $file ) ) {
+			$items[] = __( 'The Code Snippets plugin is deactivated', 'slim-snippets' );
 		}
 		slim_snippets_notice(
 			$notes ? 'warning' : 'success',
-			sprintf(
-				/* translators: 1: migrated count, 2: active, 3: inactive */
-				_n( 'Migrated %1$d snippet from Code Snippets: %2$d active, %3$d inactive.', 'Migrated %1$d snippets from Code Snippets: %2$d active, %3$d inactive.', $total, 'slim-snippets' ),
-				$total,
-				$counts['active'],
-				$counts['inactive']
-			)
-			/* translators: %s: for example "115 in the Code Snippets Trash, 2 listed below" */
-			. ( $not ? ' ' . sprintf( __( 'Not migrated: %s.', 'slim-snippets' ), implode( ', ', $not ) ) : '' )
-			. ( is_plugin_active( $file ) ? '' : ' ' . __( 'The Code Snippets plugin is deactivated.', 'slim-snippets' ) ),
-			implode( "\n", array_filter( $notes ) )
+			/* translators: %d: number of snippets */
+			sprintf( _n( 'Migrated %d snippet from Code Snippets:', 'Migrated %d snippets from Code Snippets:', $total, 'slim-snippets' ), $total ),
+			implode( "\n", array_filter( $notes ) ),
+			$items
 		);
 		wp_safe_redirect( $back );
 		exit;

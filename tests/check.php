@@ -430,4 +430,19 @@ $check(
 	'only activation makes a snippet active: ' . wp_json_encode( array( get_post_status( $gate_new ), get_post_status( $gate_future ), $gate_was, $gate_edited, (bool) $gate_rev, get_post_status( $gate_live ) ) )
 );
 
+// 24. A notice's items are shown as an escaped bulleted list, between the
+// message and the preformatted detail.
+require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+require_once ABSPATH . 'wp-admin/includes/screen.php';
+set_current_screen( 'edit-slim_snippet' );
+delete_transient( 'slim_snippets_notices_' . get_current_user_id() );
+slim_snippets_notice( 'warning', 'Migrated 3 snippets from Code Snippets:', 'note <b>', array( '2 active', '1 <inactive>' ) );
+ob_start();
+slim_snippets_admin_notices();
+$notice_html = ob_get_clean();
+$check(
+	false !== strpos( $notice_html, '<p>Migrated 3 snippets from Code Snippets:</p><ul class="ul-disc"><li>2 active</li><li>1 &lt;inactive&gt;</li></ul><pre style="white-space:pre-wrap">note &lt;b&gt;</pre>' ),
+	'notice items render as a bulleted list: ' . trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $notice_html ) ) )
+);
+
 echo $slim_fail ? "\n$slim_fail FAILED\n" : "\nALL PASSED\n";
