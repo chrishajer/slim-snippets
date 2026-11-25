@@ -1085,8 +1085,11 @@ add_action(
  * @return array[] One row per Code Snippets snippet: 'snippet' (export-style
  *                 array), 'status' in Code Snippets ('active', 'inactive' or
  *                 'trash'), 'result' ('active', 'inactive' or 'skip'), 'note'
- *                 (why it is skipped, or '') and 'existing' (ID of the inactive
- *                 Slim Snippets copy to activate instead of copying again, or 0).
+ *                 (why it is skipped, or ''), 'existing' (ID of the inactive
+ *                 Slim Snippets copy to activate instead of copying again, or 0),
+ *                 'id' (the snippet's ID in Code Snippets) and 'review' (true
+ *                 when the snippet is not migrated and its code would be lost
+ *                 from view once Code Snippets is deactivated).
  */
 function slim_snippets_cs_plan( $rows = null ) {
 	global $wpdb;
@@ -1125,13 +1128,16 @@ function slim_snippets_cs_plan( $rows = null ) {
 		$dup      = isset( $have[ $key ] ) ? $have[ $key ] : null;
 		$note     = '';
 		$existing = 0;
+		$review   = false;
 		if ( 'trash' === $status ) {
 			$note = __( 'in the Code Snippets Trash', 'slim-snippets' );
 		} elseif ( ! array_key_exists( $row['scope'], slim_snippets_scopes() ) ) {
 			/* translators: %s: Code Snippets scope name */
-			$note = sprintf( __( 'scope "%s" is not supported', 'slim-snippets' ), $row['scope'] );
+			$note   = sprintf( __( 'scope "%s" is not supported', 'slim-snippets' ), $row['scope'] );
+			$review = true;
 		} elseif ( ! empty( $row['condition_id'] ) ) {
-			$note = __( 'uses a Code Snippets condition, which is not supported', 'slim-snippets' );
+			$note   = __( 'uses a Code Snippets condition, which is not supported', 'slim-snippets' );
+			$review = true;
 		} elseif ( is_int( $dup ) ) {
 			$note = __( 'duplicate of a Code Snippets snippet listed above', 'slim-snippets' );
 			if ( $active && 'single-use' !== $plan[ $dup ]['snippet']['scope'] ) {
@@ -1158,6 +1164,8 @@ function slim_snippets_cs_plan( $rows = null ) {
 			'result'   => $note ? 'skip' : ( $active ? 'active' : 'inactive' ),
 			'note'     => $note,
 			'existing' => $existing,
+			'id'       => isset( $row['id'] ) ? (int) $row['id'] : 0,
+			'review'   => $review,
 		);
 	}
 	return $plan;
@@ -1251,6 +1259,17 @@ function slim_snippets_cs_section() {
 						} elseif ( 'skip' === $item['result'] ) {
 							/* translators: %s: reason, for example "already in Slim Snippets" */
 							echo esc_html( sprintf( __( 'Not migrated: %s', 'slim-snippets' ), $item['note'] ) );
+							// Its code is out of reach once Code Snippets is deactivated: link to it so the
+							// site owner can see what it does and how to replace it.
+							if ( $item['review'] && $item['id'] ) {
+								$edit = function_exists( 'Code_Snippets\code_snippets' ) ? \Code_Snippets\code_snippets()->get_menu_url( 'edit' ) : admin_url( 'admin.php?page=edit-snippet' );
+								printf(
+									'<br><a href="%s" target="_blank" rel="noopener noreferrer">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external" style="font-size:16px;width:16px;height:16px;vertical-align:text-bottom;text-decoration:none"></span></a>',
+									esc_url( add_query_arg( 'id', $item['id'], $edit ) ),
+									esc_html__( 'View in Code Snippets', 'slim-snippets' ),
+									esc_html__( '(opens in a new tab)', 'slim-snippets' )
+								);
+							}
 						} elseif ( $item['existing'] ) {
 							esc_html_e( 'Active (activates the copy already in Slim Snippets)', 'slim-snippets' );
 						} else {
