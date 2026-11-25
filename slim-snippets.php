@@ -3,7 +3,7 @@
  * Plugin Name:       Slim Snippets
  * Plugin URI:        https://github.com/chrishajer/slim-snippets
  * Description:       Run PHP, CSS and JavaScript snippets without editing functions.php. Imports Code Snippets exports.
- * Version:           1.1.1
+ * Version:           1.2.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Chris Hajer
@@ -22,7 +22,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SLIM_SNIPPETS_VERSION', '1.1.1' );
+define( 'SLIM_SNIPPETS_VERSION', '1.2.0' );
 define( 'SLIM_SNIPPETS_FILE', __FILE__ );
 
 /**
@@ -599,4 +599,9 @@ function slim_snippets_insert_data( $data, $postarr, $unsanitized ) {
 
 if ( is_admin() ) {
 	require_once __DIR__ . '/admin.php';
+}
+
+// Update checks run in the admin, in WP-Cron and in WP-CLI.
+if ( is_admin() || wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+	require_once __DIR__ . '/updater.php';
 }

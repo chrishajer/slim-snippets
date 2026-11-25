@@ -2,9 +2,9 @@
 Contributors: chrishajer
 Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,6 +27,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **Revisions** of the code, title and description.
 * **Import and export as JSON** in the same format as Code Snippets, so you can move snippets between the two plugins in either direction. Import several files at once, and choose whether the snippets arrive inactive (the default), keep the status from the file, or are all activated.
 * **Migrate from Code Snippets** on the same site with one click: review what will be copied, then Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
+* **Updates from GitHub.** New releases show on the Plugins and Updates screens like other plugin updates, and auto-updates can be turned on.
 * **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in wp-config.php, or stop them for your own requests only by adding `?slim-snippets-safe-mode=1` to any URL while logged in.
 
 No custom database tables. Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
@@ -67,9 +68,11 @@ Code Snippets stores descriptions as HTML. On import they become plain text: par
 
 Add `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` to wp-config.php, fix or deactivate the snippet, then remove the line. On a single site, WordPress's recovery mode email also lets you log in with Slim Snippets paused.
 
-= Why don't I get updates from WordPress.org? =
+= How do I get updates? =
 
-Slim Snippets is distributed on GitHub. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
+Slim Snippets updates from its releases on GitHub, not from WordPress.org. A new release shows on the Plugins and Updates screens like other plugin updates, and you can turn on auto-updates for it. WordPress checks every 12 hours; to check now, click Check again on Dashboard > Updates. Update checks go to api.github.com and raw.githubusercontent.com (for the release's readme.txt, which says which WordPress and PHP versions it works with) and do not include your site's address. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
+
+Versions before 1.2.0 cannot update themselves. Install 1.2.0 from GitHub once, and later releases arrive as updates.
 
 = Can I add snippets with WP-CLI? =
 
@@ -98,12 +101,7 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.1.1 =
-* Import notes name the file that is not a snippets export or that has a snippet that is not valid.
-* The safe mode notice says how to turn safe mode off: a link when it was turned on with the URL parameter, or which wp-config.php line to remove.
-* The Import / Export page explains that while the Code Snippets plugin is active, an imported copy that declares a function or class cannot be activated, and a copy that declares neither would run twice.
-* Clearer wording on the Import / Export page and the migration screens, including "the Code Snippets plugin" where the plugin itself is meant.
-* "Snippet not found." can be translated.
-* Older changelog entries moved from readme.txt to changelog.txt.
+= 1.2.0 =
+* Updates from GitHub. New releases show on the Plugins and Updates screens like other plugin updates, View details shows the release notes, and auto-updates can be turned on.
 
 Older versions are listed in changelog.txt.

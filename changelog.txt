@@ -2,6 +2,9 @@
 
 Every release, newest first. readme.txt lists only the current release.
 
+= 1.2.0 =
+* Updates from GitHub. New releases show on the Plugins and Updates screens like other plugin updates, View details shows the release notes, and auto-updates can be turned on.
+
 = 1.1.1 =
 * Import notes name the file that is not a snippets export or that has a snippet that is not valid.
 * The safe mode notice says how to turn safe mode off: a link when it was turned on with the URL parameter, or which wp-config.php line to remove.
