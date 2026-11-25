@@ -1221,12 +1221,16 @@ function slim_snippets_cs_section() {
 		'trash'    => __( 'Trash', 'slim-snippets' ),
 	);
 	$network = is_plugin_active_for_network( plugin_basename( CODE_SNIPPETS_FILE ) );
+	$review  = array_filter( array_column( $plan, 'review' ) );
 	?>
 	<h2 id="migrate"><?php esc_html_e( 'Migrate from Code Snippets', 'slim-snippets' ); ?></h2>
 	<ul class="ul-disc">
 		<li><?php esc_html_e( 'The Code Snippets plugin is active on this site. Migrating copies its snippets into Slim Snippets and then deactivates Code Snippets, so the same snippets do not run in both plugins.', 'slim-snippets' ); ?></li>
 		<li><?php esc_html_e( 'Snippets that are active in Code Snippets are active in Slim Snippets after migrating. Run-once snippets are copied inactive.', 'slim-snippets' ); ?></li>
-		<li><?php esc_html_e( 'The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it.', 'slim-snippets' ); ?></li>
+		<li><?php esc_html_e( 'The Code Snippets plugin and its snippets are not changed or deleted. To switch back, deactivate Slim Snippets first, then reactivate Code Snippets. With both plugins active, the same snippets run twice, and a snippet that declares a function or class causes a fatal error.', 'slim-snippets' ); ?></li>
+		<?php if ( $review && ! $network ) : ?>
+			<li><?php esc_html_e( 'Snippets with a "view snippet" link below are not migrated, so they stop running when the Code Snippets plugin is deactivated. Open each one to see what it does before you migrate.', 'slim-snippets' ); ?></li>
+		<?php endif; ?>
 		<?php if ( $network ) : ?>
 			<li><strong><?php esc_html_e( 'The Code Snippets plugin is network-activated, so it is not deactivated here and every snippet is copied inactive.', 'slim-snippets' ); ?></strong></li>
 		<?php endif; ?>
