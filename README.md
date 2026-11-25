@@ -10,7 +10,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 - **Syntax-highlighting editor** (the CodeMirror editor built into WordPress). The mode follows the snippet's scope.
 - **Activation checks.** PHP is syntax-checked and test-run before it is activated. If it throws an error, dies with a fatal error, or declares a function or class that already exists, it stays inactive and the error is shown.
 - **Errors after activation.** If an active snippet throws an error on a later page load, the error is recorded and shown on the snippet. The snippet stays active, so a visitor cannot switch it off by making it fail.
-- **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in `wp-config.php`, or stop them for your own requests only by adding `?slim-snippets-safe-mode=1` to any URL while logged in.
+- **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in `wp-config.php`, or stop them for your own requests only by adding `?slim-snippets-safe-mode=1` to any URL while logged in as a user who can manage snippets.
 - **Fast.** Active snippets are stored in one autoloaded option, so running them adds no database queries.
 - **Title, code, description and tags** for each snippet.
 - **List views:** All, Active, Inactive, Recently Active (snippets deactivated in the last 7 days) and Trash.
