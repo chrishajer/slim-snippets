@@ -17,7 +17,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **PHP snippets** that run everywhere, only in the admin, only on the front end, or once.
 * **CSS and JavaScript snippets.** CSS is printed in the front-end head or the admin head. JavaScript is printed in the front-end head or footer.
 * **Syntax-highlighting editor** (the CodeMirror editor built into WordPress). The mode follows the snippet's scope.
-* **No activation with errors.** PHP is syntax-checked and test-run before it is activated. If it throws an error, dies with a fatal error, or declares a function or class that already exists, it stays inactive and the error is shown. If an active snippet throws an error on a later page load, the error is recorded and shown on the snippet, and the snippet stays active, so a visitor cannot switch it off by making it fail.
+* **No activation with errors.** PHP is syntax-checked and test-run before it is activated. If it throws an error, dies with a fatal error, or declares a function or class that already exists, it stays inactive and the error is shown. If an active snippet throws an error on a later page load, the error is recorded and shown on the snippet, and the snippet stays active.
 * **Fast.** Active snippets are stored in one autoloaded option, so running them adds no database queries.
 * **Priority.** Lower numbers run first.
 * **Title, code, description and tags** for each snippet.
@@ -29,7 +29,7 @@ Slim Snippets keeps the parts of a snippets plugin that matter day to day and le
 * **Migrate from Code Snippets** on the same site with one click: review what will be copied, then Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of its active snippets.
 * **Safe mode.** Stop all snippets with `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` in wp-config.php, or stop them for your own requests only by adding `?slim-snippets-safe-mode=1` to any URL while logged in.
 
-Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
+No custom database tables. Snippets are stored as a private post type, so the list, trash, search, sorting and revisions are WordPress's own screens.
 
 Only administrators can manage snippets. On multisite, only super admins can, because snippets run PHP. If wp-config.php sets `DISALLOW_UNFILTERED_HTML` to true, nobody can manage snippets: that setting stops even administrators from adding their own JavaScript, and snippets add JavaScript and PHP. Snippets that are already active keep running.
 
@@ -43,13 +43,13 @@ Only administrators can manage snippets. On multisite, only super admins can, be
 
 = How do I move my snippets from Code Snippets? =
 
-If Code Snippets is active on the same site, Slim Snippets can migrate them for you:
+If the Code Snippets plugin is active on the same site, Slim Snippets can migrate them for you:
 
-1. Go to Snippets > Import / Export. While Code Snippets is active, Migrate from Code Snippets is the first section.
+1. Go to Snippets > Import / Export. While the Code Snippets plugin is active, Migrate from Code Snippets is the first section.
 2. Review the list. It shows each Code Snippets snippet, its status in Code Snippets, and whether it will be migrated.
 3. Click the Migrate button. Slim Snippets copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets.
 
-Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), and snippets that use a Code Snippets condition are not migrated. A snippet that is already in Slim Snippets (same name and code) is not copied again; if that copy is inactive and the snippet is active in Code Snippets, the copy is activated. Run-once snippets are copied inactive. A copy with a syntax error, or one that declares a function or class that already exists, stays inactive and is named in the notice. The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it. If Code Snippets is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
+Trashed snippets, snippets with scopes that Slim Snippets does not support (shortcodes and HTML content), and snippets that use a Code Snippets condition are not migrated. A snippet that is already in Slim Snippets (same name and code) is not copied again; if that copy is inactive and the snippet is active in Code Snippets, the copy is activated. Run-once snippets are copied inactive. A copy with a syntax error, or one that declares a function or class that already exists, stays inactive and is named in the notice. The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it. If the Code Snippets plugin is network-activated on multisite, it is not deactivated and every snippet is copied inactive.
 
 To move snippets from Code Snippets on another site, export them there and import the file:
 
@@ -57,9 +57,9 @@ To move snippets from Code Snippets on another site, export them there and impor
 2. On this site, go to Snippets > Import / Export, upload the file, and choose the status after import.
 3. If you imported them inactive, activate the snippets you want, one at a time or with the Activate bulk action.
 
-If Code Snippets is also active on this site, use the migration above instead. While it is active, the functions in your snippets are already defined, so imported copies cannot be activated.
+If the Code Snippets plugin is already active on this site, use the migration above instead. Code Snippets runs its active snippets on every page load. An imported copy that declares a function or class cannot be activated, because PHP does not allow one to be declared twice. A copy that declares neither can be activated, but it then runs twice: once from Code Snippets and once from Slim Snippets.
 
-By default every snippet is imported inactive, so nothing runs until you activate it. You can choose to keep the status from the file (trashed snippets go to the Trash) or activate every snippet. Activating runs the usual checks: a snippet that fails them stays inactive and is named in the notice. Run-once snippets are always imported inactive, so an import never runs them. Snippets with scopes that Slim Snippets does not support (shortcodes and HTML content) are skipped and named in the notice.
+Run-once snippets are always imported inactive, and snippets with unsupported scopes (shortcodes and HTML content) are skipped.
 
 Code Snippets stores descriptions as HTML. On import they become plain text: paragraphs and line breaks are kept, list items become "- " lines, and links keep their URL in parentheses. The conversion is one way: if you export snippets back to Code Snippets, their descriptions stay plain text.
 
@@ -81,7 +81,7 @@ That creates an inactive snippet. Activate it on the Snippets screen so it is ch
 
 = What happens to my snippets if I delete the plugin? =
 
-They stay in the database. Reinstall the plugin and they come back.
+They stay in the database, so reinstalling the plugin brings them back. Deleting the plugin removes only its own options. To remove the snippets too, move them to the Trash and empty it before you delete the plugin.
 
 == Credits ==
 

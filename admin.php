@@ -105,7 +105,7 @@ function slim_snippets_admin_notices() {
 	if ( defined( 'CODE_SNIPPETS_FILE' ) && $screen && current_user_can( slim_snippets_cap() ) && current_user_can( 'activate_plugins' ) && ( 'plugins' === $screen->id || ( slim_snippets_is_screen() && false === strpos( $screen->id, 'slim-snippets-import' ) ) ) ) {
 		printf(
 			'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>',
-			esc_html__( 'Code Snippets is active. Slim Snippets can copy its snippets and deactivate Code Snippets in one step.', 'slim-snippets' ),
+			esc_html__( 'The Code Snippets plugin is active. Slim Snippets can copy its snippets and deactivate Code Snippets in one step.', 'slim-snippets' ),
 			esc_url( admin_url( 'edit.php?post_type=slim_snippet&page=slim-snippets-import#migrate' ) ),
 			esc_html__( 'Review and migrate', 'slim-snippets' )
 		);
@@ -993,7 +993,7 @@ function slim_snippets_import_page() {
 				<li><?php esc_html_e( 'Activating runs the usual checks. A snippet with an error, or one that declares a function or class that already exists, stays inactive and is listed in the notice.', 'slim-snippets' ); ?></li>
 				<li><?php esc_html_e( 'Run-once snippets are always imported inactive, so an import never runs them.', 'slim-snippets' ); ?></li>
 				<li><?php esc_html_e( 'Trashed snippets are not imported unless you keep the status from the file.', 'slim-snippets' ); ?></li>
-				<li><strong><?php esc_html_e( 'Migrating from Code Snippets?', 'slim-snippets' ); ?></strong> <?php esc_html_e( 'If it is active on this site, use Migrate from Code Snippets at the top of this page. To import an export file instead, deactivate Code Snippets first: while it is active, the functions in your snippets are already defined, so the imported copies cannot be activated.', 'slim-snippets' ); ?></li>
+				<li><strong><?php esc_html_e( 'Migrating from Code Snippets?', 'slim-snippets' ); ?></strong> <?php esc_html_e( 'If the Code Snippets plugin is active on this site, use Migrate from Code Snippets at the top of this page. To import an export file instead, deactivate Code Snippets first. While Code Snippets is active, an imported copy that declares a function or class cannot be activated, and a copy that declares neither would run twice.', 'slim-snippets' ); ?></li>
 			</ul>
 			<?php submit_button( __( 'Import', 'slim-snippets' ) ); ?>
 		</form>
@@ -1190,11 +1190,11 @@ function slim_snippets_cs_section() {
 	?>
 	<h2 id="migrate"><?php esc_html_e( 'Migrate from Code Snippets', 'slim-snippets' ); ?></h2>
 	<ul class="ul-disc">
-		<li><?php esc_html_e( 'Code Snippets is active on this site. Migrating copies its snippets into Slim Snippets and then deactivates Code Snippets, so no function is declared twice.', 'slim-snippets' ); ?></li>
+		<li><?php esc_html_e( 'The Code Snippets plugin is active on this site. Migrating copies its snippets into Slim Snippets and then deactivates Code Snippets, so the same snippets do not run in both plugins.', 'slim-snippets' ); ?></li>
 		<li><?php esc_html_e( 'Snippets that are active in Code Snippets are active in Slim Snippets after migrating. Run-once snippets are copied inactive.', 'slim-snippets' ); ?></li>
 		<li><?php esc_html_e( 'The Code Snippets plugin and its snippets are not changed or deleted, so you can switch back by reactivating it.', 'slim-snippets' ); ?></li>
 		<?php if ( $network ) : ?>
-			<li><strong><?php esc_html_e( 'Code Snippets is network-activated, so it is not deactivated here and every snippet is copied inactive.', 'slim-snippets' ); ?></strong></li>
+			<li><strong><?php esc_html_e( 'The Code Snippets plugin is network-activated, so it is not deactivated here and every snippet is copied inactive.', 'slim-snippets' ); ?></strong></li>
 		<?php endif; ?>
 	</ul>
 	<?php if ( ! $plan ) : ?>
@@ -1260,7 +1260,7 @@ add_action(
 		}
 		$back = admin_url( 'edit.php?post_type=slim_snippet' );
 		if ( ! defined( 'CODE_SNIPPETS_FILE' ) ) {
-			slim_snippets_notice( 'error', __( 'Code Snippets is not active, so there is nothing to migrate.', 'slim-snippets' ) );
+			slim_snippets_notice( 'error', __( 'The Code Snippets plugin is not active, so there is nothing to migrate.', 'slim-snippets' ) );
 			wp_safe_redirect( $back );
 			exit;
 		}
