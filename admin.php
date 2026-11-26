@@ -1089,7 +1089,17 @@ function slim_snippets_settings_page() {
 					<th scope="row"><?php esc_html_e( 'Uninstall', 'slim-snippets' ); ?></th>
 					<td>
 						<label><input type="checkbox" name="slim_snippets_delete_data" value="1"<?php checked( (bool) get_option( 'slim_snippets_delete_data' ) ); ?>> <?php esc_html_e( 'Delete all snippets and tags when the plugin is deleted', 'slim-snippets' ); ?></label>
-						<p class="description"><?php esc_html_e( 'Every snippet, including those in the Trash, is deleted with its revisions and tags. This cannot be undone. To keep a copy, export your snippets first on Snippets > Import / Export.', 'slim-snippets' ); ?></p>
+						<p class="description">
+							<?php
+							echo wp_kses_post(
+								sprintf(
+									/* translators: %s: link to the Export section of the Import / Export page */
+									__( 'Every snippet, including those in the Trash, is deleted with its revisions and tags. This cannot be undone. To keep a copy, %s first.', 'slim-snippets' ),
+									'<a href="' . esc_url( admin_url( 'edit.php?post_type=slim_snippet&page=slim-snippets-import#export' ) ) . '">' . esc_html__( 'export your snippets', 'slim-snippets' ) . '</a>'
+								)
+							);
+							?>
+						</p>
 						<?php if ( is_multisite() ) : ?>
 							<p class="description"><?php esc_html_e( 'This applies to this site only.', 'slim-snippets' ); ?></p>
 						<?php endif; ?>
@@ -1173,7 +1183,7 @@ function slim_snippets_import_page() {
 			<?php submit_button( __( 'Import', 'slim-snippets' ) ); ?>
 		</form>
 
-		<h2><?php esc_html_e( 'Export', 'slim-snippets' ); ?></h2>
+		<h2 id="export"><?php esc_html_e( 'Export', 'slim-snippets' ); ?></h2>
 		<ul class="ul-disc">
 			<li><?php esc_html_e( 'To export one snippet, hover over it on the All Snippets screen and click Export under its name.', 'slim-snippets' ); ?></li>
 			<li><?php esc_html_e( 'To export several snippets, select them on the All Snippets screen, choose Export from the Bulk actions menu, and click Apply.', 'slim-snippets' ); ?></li>
