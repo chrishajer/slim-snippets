@@ -37,8 +37,6 @@ If `wp-config.php` sets `DISALLOW_UNFILTERED_HTML` to true, nobody can manage sn
 
 Slim Snippets updates from its releases on GitHub, not from WordPress.org. A new release shows on the Plugins and Updates screens like other plugin updates, and you can turn on auto-updates for it. WordPress checks every 12 hours; to check now, click Check again on Dashboard > Updates. Update checks go to api.github.com and raw.githubusercontent.com (for version requirements) and do not include your site's address. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
 
-Versions before 1.2.0 cannot update themselves. Install 1.2.0 from GitHub once, and later releases arrive as updates.
-
 ## Safe mode
 
 Safe mode stops Slim Snippets from running any snippets: no PHP runs, and no CSS or JavaScript is added. Snippets are not changed or deactivated, so turning safe mode off brings everything back as it was. Use it when a snippet breaks the site, so you can get in and fix or deactivate it.

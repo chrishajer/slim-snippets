@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.7
+Stable tag: 1.2.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -77,8 +77,6 @@ Add `define( 'SLIM_SNIPPETS_SAFE_MODE', true );` to `wp-config.php`, fix or deac
 
 Slim Snippets updates from its releases on GitHub, not from WordPress.org. A new release shows on the Plugins and Updates screens like other plugin updates, and you can turn on auto-updates for it. WordPress checks every 12 hours; to check now, click Check again on Dashboard > Updates. Update checks go to api.github.com and raw.githubusercontent.com (for version requirements) and do not include your site's address. The plugin's `Update URI` header stops WordPress.org from offering an unrelated plugin with the same name as an update.
 
-Versions before 1.2.0 cannot update themselves. Install 1.2.0 from GitHub once, and later releases arrive as updates.
-
 = Can I add snippets with WP-CLI? =
 
 Yes. Snippets are posts of type `slim_snippet`:
@@ -106,7 +104,7 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.2.7 | 2026-11-25 =
-* Removed the Description column from the Tags screen and the Description field from the Add New Tag and Edit Tag forms. Slim Snippets does not use tag descriptions.
+= 1.2.8 | 2026-11-25 =
+* Updated the readme and changelog to be more concise.
 
 Older versions are listed in `changelog.txt`.

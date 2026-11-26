@@ -2,104 +2,107 @@
 
 Every release, newest first. `readme.txt` lists only the current release.
 
+= 1.2.8 | 2026-11-25 =
+* Updated the readme and changelog to be more concise.
+
 = 1.2.7 | 2026-11-25 =
-* Removed the Description column from the Tags screen and the Description field from the Add New Tag and Edit Tag forms. Slim Snippets does not use tag descriptions.
+* Removed the Description column from the Tags screen and the Description field from the Add New Tag and Edit Tag forms.
 
 = 1.2.6 | 2026-11-25 =
-* Added a view to the snippet list, for example "Tag: Gravity Forms (33)", that shows when the list is filtered by a tag. Click All to clear it.
-* Fixed tag counts showing 0 on the Tags screen. A tag's count now includes inactive snippets, and existing counts are recalculated once after the update.
+* Added a view that shows which tag the snippet list is filtered by.
+* Fixed tag counts showing 0 on the Tags screen.
 
 = 1.2.5 | 2026-11-25 =
-* Fixed a fatal error on multisite when a snippet activated while Code Snippets was active declared a function or class that a Code Snippets network snippet also declares.
-* Fixed the import page pointing to the site's Plugins screen to deactivate a network-activated Code Snippets plugin. It now links to the Network Admin Plugins screen.
+* Fixed a fatal error on multisite when a snippet redeclared a function or class from a Code Snippets network snippet.
+* Fixed the import page linking to the wrong Plugins screen when Code Snippets is network-activated.
 
 = 1.2.4 | 2026-11-25 =
-* Fixed an active snippet that declares a function or class being left inactive, with a "Cannot redeclare" error, when it is saved again on the edit screen.
-* Fixed the migration not copying an active Code Snippets snippet when an inactive one with the same name and code was cleared. The active one is now the one copied, from the Active table.
-* Fixed the migration deactivating the Code Snippets plugin when none of the selected snippets could be migrated, for example because the snippets changed after the page loaded.
-* Fixed the migration page opening scrolled past its error when no snippets that can be migrated were selected.
-* Fixed a checked select-all checkbox showing above a migration table with no snippets to select.
+* Fixed an active snippet that declares a function or class becoming inactive when it is saved again.
+* Fixed the migration skipping an active Code Snippets snippet that has an inactive duplicate.
+* Fixed the migration deactivating the Code Snippets plugin when none of the selected snippets could be migrated.
+* Fixed the migration error being scrolled out of view.
+* Fixed a select-all checkbox showing on a migration table with nothing to select.
 
 = 1.2.3 | 2026-11-25 =
-* Added checkboxes to the migration page, which now lists snippets in Active, Inactive and Trash tables. Only the selected snippets are copied.
-* Added a "view snippet" link, opening in a new tab, for each Code Snippets snippet that is not migrated.
-* Updated the import and migration results to show each count and note on its own line, and to count snippets left inactive by an error separately.
-* Updated the migration page to say how to switch back safely: deactivate Slim Snippets first, then reactivate Code Snippets.
-* Updated the migration after testing with Code Snippets Pro 4.1.0: CSS and JavaScript snippets keep their status from Pro, and are copied inactive from the free plugin, which does not run them.
+* Added checkboxes to the migration page, which now lists snippets in Active, Inactive and Trash tables.
+* Added a "view snippet" link for each Code Snippets snippet that is not migrated.
+* Updated the import and migration results to show each count on its own line.
+* Updated the migration page to explain how to switch back to Code Snippets.
+* Updated the migration of CSS and JavaScript snippets for Code Snippets Pro and the free plugin.
 * Updated the import page to offer only Inactive while the Code Snippets plugin is active.
-* Fixed a fatal error when a snippet activated while Code Snippets was active declared a function or class that one of its front-end snippets also declares.
+* Fixed a fatal error when a snippet redeclared a function or class from a Code Snippets front-end snippet.
 
 = 1.2.2 | 2026-11-25 =
 * Updated the plugin description to mention migrating from the Code Snippets plugin.
-* Updated the Safe mode description: the URL parameter works only for users who can manage snippets.
-* Fixed snippets becoming active without the activation checks when published another way (the WordPress importer, a revision restore, WP-CLI or another plugin). They are now saved inactive.
-* Removed snippets from Tools > Export. Use Snippets > Import / Export instead.
+* Updated the Safe mode description.
+* Fixed snippets published outside the Snippets screen becoming active without the activation checks.
+* Removed snippets from Tools > Export.
 
 = 1.2.1 | 2026-11-25 =
 * Updated `readme.txt` and `README.md` for clarity and consistency.
-* Updated the changelog so each entry starts with Added, Updated, Fixed or Removed, and each release shows its date.
+* Updated the changelog format and added release dates.
 
 = 1.2.0 | 2026-11-25 =
-* Added updates from GitHub releases. New releases show on the Plugins and Updates screens like other plugin updates, View details shows the release notes, and auto-updates can be turned on.
+* Added updates from GitHub releases.
 
 = 1.1.1 | 2026-11-24 =
-* Added a note to the Import / Export page: while the Code Snippets plugin is active, an imported copy that declares a function or class cannot be activated, and a copy that declares neither would run twice.
-* Updated the import notes to name the file that is not a snippets export or that has a snippet that is not valid.
-* Updated the safe mode notice to say how to turn safe mode off: a link when it was turned on with the URL parameter, or which `wp-config.php` line to remove.
-* Updated the wording on the Import / Export page and the migration screens, including "the Code Snippets plugin" where the plugin itself is meant.
+* Added a note to the Import / Export page about importing while the Code Snippets plugin is active.
+* Updated the import notes to name each file that is not valid.
+* Updated the safe mode notice to say how to turn safe mode off.
+* Updated the wording on the Import / Export page and the migration screens.
 * Moved older changelog entries from `readme.txt` to `changelog.txt`.
 * Fixed "Snippet not found." not being translatable.
 
 = 1.1.0 | 2026-11-24 =
-* Added support for `DISALLOW_UNFILTERED_HTML`: when it is true, nobody can manage snippets. Snippets that are already active keep running.
-* Updated the migration from Code Snippets to activate an inactive copy that is already in Slim Snippets (for example from an earlier import) instead of skipping it. Matching ignores line endings.
-* Updated the migration to copy duplicate snippets in Code Snippets once. The copy is active if any of them was active.
-* Updated the migration to deactivate the Code Snippets plugin only after every copy is checked, and then activate the copies together, so the time with neither plugin running is as short as possible.
+* Added support for `DISALLOW_UNFILTERED_HTML`.
+* Updated the migration to activate an inactive copy already in Slim Snippets instead of skipping it.
+* Updated the migration to copy duplicate Code Snippets snippets once.
+* Updated the migration to keep the time with neither plugin running as short as possible.
 * Updated the migration notice and section to show only to users who can activate plugins.
-* Fixed an issue where a visitor could switch off a snippet by making it throw an error while loading (for example with an unexpected URL parameter). The snippet now stays active and the error is recorded.
+* Fixed an issue where a visitor could switch off a snippet by making it throw an error.
 * Fixed an issue where a search term with "$" or "\" did not find tags as typed.
-* Fixed a fatal error when a migrated copy declares a function or class that an active snippet or an earlier copy already declares. The copy now stays inactive, with a note.
+* Fixed a fatal error when a migrated copy redeclared a function or class.
 * Fixed a database error when the Code Snippets table is missing.
 
 = 1.0.9 | 2026-11-24 =
-* Added migration from Code Snippets on the same site. While the Code Snippets plugin is active, the Import / Export page lists each of its snippets and what migrating will do with it. Migrating copies the snippets, deactivates the Code Snippets plugin, and activates the copies of the snippets that were active in Code Snippets. A notice on the Snippets screens and the Plugins screen links to it.
+* Added migration from Code Snippets on the same site.
 
 = 1.0.8 | 2026-11-24 =
-* Updated the Export section of the Import / Export page to list each way to export: one snippet, several snippets, or every snippet that is not in the Trash.
+* Updated the Export section of the Import / Export page to list each way to export.
 
 = 1.0.7 | 2026-11-24 =
-* Added a "Snippets" link on the Plugins screen, before Deactivate.
-* Updated the Import / Export page with a larger drop zone for import files and a browse button that looks like the other WordPress buttons.
-* Updated the import notes on the Import / Export page to a bulleted list, with clearer wording about trashed snippets and migrating from Code Snippets.
-* Updated the Extended view of the snippets list to show "No description" in grey italics for a snippet without a description, instead of the start of its code.
+* Added a "Snippets" link on the Plugins screen.
+* Updated the Import / Export page with a larger drop zone and a standard browse button.
+* Updated the import notes on the Import / Export page to a bulleted list.
+* Updated the Extended view of the snippets list to show "No description" for a snippet without one.
 
 = 1.0.6 | 2026-11-24 =
-* Updated the Description box on the snippet screen to be taller (7 rows).
+* Updated the Description box on the snippet screen to be taller.
 
 = 1.0.5 | 2026-11-24 =
-* Updated the save message to show "Snippet is active." or "Snippet is inactive." only when the status changed. Saving without a status change shows only "Snippet saved."
+* Updated the save message to mention the status only when it changed.
 * Updated the priority hint to "Lower runs sooner."
 
 = 1.0.4 | 2026-11-24 =
-* Added import options: import every snippet inactive (the default), keep the status from the file (including the Trash), or activate every snippet. Run-once snippets are never run by an import.
-* Updated the import notices to name each skipped snippet and each snippet that could not be activated.
+* Added import options for the status of imported snippets.
+* Updated the import notices to name each snippet that was skipped or not activated.
 * Updated the Snippets menu to list Import / Export before Tags.
-* Fixed a fatal error when activating a snippet that declares a function or class that already exists, also in an active snippet that does not run on the current screen. The snippet now stays inactive.
+* Fixed a fatal error when activating a snippet that redeclares a function or class.
 
 = 1.0.3 | 2026-11-24 =
-* Updated the Snippet box (scope, priority and the Save buttons) so it can no longer be hidden in Screen Options.
+* Updated the Snippet box so it can no longer be hidden in Screen Options.
 * Updated the Snippet box to have the same padding as the other boxes.
-* Updated the activate button to say "Save & Run Once" as soon as you choose the run-once scope.
-* Removed the Slug box from the snippet screen. Snippets have no URL.
+* Updated the activate button to say "Save & Run Once" for the run-once scope.
+* Removed the Slug box from the snippet screen.
 
 = 1.0.2 | 2026-11-24 =
-* Added conversion of Code Snippets descriptions from HTML to plain text on import. Paragraphs, lists and preformatted text keep their layout, and link URLs are kept in parentheses.
-* Fixed the edit screen escaping the code and description twice. The description showed entities such as &lt;, and with the visual editor turned off, saving could write entities into the code.
-* Fixed an issue where text such as "option_<key>" was deleted from descriptions where WordPress filters HTML (`DISALLOW_UNFILTERED_HTML`, or WP-CLI without `--user`). Descriptions are now saved as typed.
-* Fixed an issue where restoring a revision brought back filtered text. Revisions now keep the code and description exactly as saved.
+* Added conversion of Code Snippets descriptions from HTML to plain text on import.
+* Fixed the edit screen escaping the code and description twice.
+* Fixed text such as "option_<key>" being deleted from descriptions.
+* Fixed an issue where restoring a revision brought back filtered text.
 
 = 1.0.1 | 2026-11-24 =
-* Updated the import so imported snippets are always inactive, even if they were active in the export.
+* Updated the import so imported snippets are always inactive.
 
 = 1.0.0 | 2026-11-24 =
 * First release.
