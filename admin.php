@@ -542,6 +542,52 @@ function slim_snippets_recent_args() {
 	);
 }
 
+/**
+ * Once per version, on the first admin page load after an update.
+ */
+function slim_snippets_upgrade() {
+	if ( SLIM_SNIPPETS_VERSION === get_option( 'slim_snippets_version' ) ) {
+		return;
+	}
+	// Before 1.2.6, tag counts left out inactive snippets and were not updated
+	// on activation, so most were 0.
+	$tags = get_terms(
+		array(
+			'taxonomy'   => 'slim_snippet_tag',
+			'hide_empty' => false,
+			'fields'     => 'tt_ids',
+		)
+	);
+	if ( $tags && ! is_wp_error( $tags ) ) {
+		wp_update_term_count_now( $tags, 'slim_snippet_tag' );
+	}
+	update_option( 'slim_snippets_version', SLIM_SNIPPETS_VERSION, true );
+}
+add_action( 'admin_init', 'slim_snippets_upgrade' );
+
+// A tag link in the Tags column filters the list by that tag. Show the filter
+// as the current view, so the list does not look unchanged; All clears it.
+add_filter(
+	'views_edit-slim_snippet',
+	function ( $views ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- View filter.
+		$tag = isset( $_GET['taxonomy'], $_GET['term'] ) && 'slim_snippet_tag' === $_GET['taxonomy']
+			? get_term_by( 'slug', sanitize_text_field( wp_unslash( $_GET['term'] ) ), 'slim_snippet_tag' )
+			: false;
+		// phpcs:enable
+		if ( $tag ) {
+			$views['slim_tag'] = sprintf(
+				'<a href="%s" class="current" aria-current="page">%s <span class="count">(%d)</span></a>',
+				esc_url( admin_url( 'edit.php?post_type=slim_snippet&taxonomy=slim_snippet_tag&term=' . rawurlencode( $tag->slug ) ) ),
+				/* translators: %s: tag name */
+				esc_html( sprintf( __( 'Tag: %s', 'slim-snippets' ), $tag->name ) ),
+				$GLOBALS['wp_query']->found_posts
+			);
+		}
+		return $views;
+	}
+);
+
 add_filter(
 	'views_edit-slim_snippet',
 	function ( $views ) {

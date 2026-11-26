@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.5
+Stable tag: 1.2.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,8 +106,8 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.2.5 | 2026-11-25 =
-* Fixed a fatal error on multisite when a snippet activated while Code Snippets was active declared a function or class that a Code Snippets network snippet also declares.
-* Fixed the import page pointing to the site's Plugins screen to deactivate a network-activated Code Snippets plugin. It now links to the Network Admin Plugins screen.
+= 1.2.6 | 2026-11-25 =
+* Added a view to the snippet list, for example "Tag: Gravity Forms (33)", that shows when the list is filtered by a tag. Click All to clear it.
+* Fixed tag counts showing 0 on the Tags screen. A tag's count now includes inactive snippets, and existing counts are recalculated once after the update.
 
 Older versions are listed in `changelog.txt`.

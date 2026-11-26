@@ -3,7 +3,7 @@
  * Plugin Name:       Slim Snippets
  * Plugin URI:        https://github.com/chrishajer/slim-snippets
  * Description:       Run PHP, CSS and JavaScript snippets without editing functions.php. Migrate from the Code Snippets plugin or import its exports.
- * Version:           1.2.5
+ * Version:           1.2.6
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Chris Hajer
@@ -22,7 +22,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SLIM_SNIPPETS_VERSION', '1.2.5' );
+define( 'SLIM_SNIPPETS_VERSION', '1.2.6' );
 define( 'SLIM_SNIPPETS_FILE', __FILE__ );
 
 /**
@@ -149,6 +149,19 @@ function slim_snippets_register() {
 		)
 	);
 }
+
+// A tag's count is the number of snippets in the Trash or not: inactive
+// snippets are drafts, and the count links to the All view, which lists
+// both. Counting drafts also keeps counts right when a snippet is activated
+// or deactivated, which changes its status without recounting.
+add_filter(
+	'update_post_term_count_statuses',
+	function ( $statuses, $taxonomy ) {
+		return 'slim_snippet_tag' === $taxonomy->name ? array( 'publish', 'draft' ) : $statuses;
+	},
+	10,
+	2
+);
 
 /**
  * Safe mode: the SLIM_SNIPPETS_SAFE_MODE constant, or ?slim-snippets-safe-mode=1
