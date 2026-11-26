@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.8
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,7 +87,7 @@ That creates an inactive snippet, even with `--post_status=publish`, and `wp pos
 
 = What happens to my snippets if I delete the plugin? =
 
-They stay in the database, so reinstalling the plugin brings them back. Deleting the plugin removes only its own options. To remove the snippets too, move them to the Trash and empty it before you delete the plugin.
+They stay in the database, so reinstalling the plugin brings them back. Deleting the plugin removes only its own options. To delete the snippets and their tags too, turn on Delete all snippets and tags when the plugin is deleted on Snippets > Settings, then delete the plugin.
 
 == Credits ==
 
@@ -104,7 +104,7 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.2.8 | 2026-11-25 =
-* Updated the readme and changelog to be more concise.
+= 1.3.0 | 2026-11-26 =
+* Added a setting to delete all snippets and tags when the plugin is deleted.
 
 Older versions are listed in `changelog.txt`.

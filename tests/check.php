@@ -525,7 +525,47 @@ wp_trash_post( $tagged );
 $counts[] = $tag_count();
 $check( array( 1, 1, 1, 0 ) === $counts, 'tag count: inactive, active, inactive, trashed: ' . wp_json_encode( $counts ) );
 
-// 29. While Code Snippets is active, an import activates nothing (the Trash is
+// 29. Deleting the plugin with "Delete all snippets and tags" on deletes every
+// snippet (with its meta, revisions and tag links), every tag and the
+// options. It runs in a transaction that is rolled back, so the site's own
+// snippets are never deleted, and is skipped where a table cannot roll back.
+global $wpdb;
+// phpcs:disable WordPress.DB -- Counts rows directly, inside a transaction.
+$un_tables  = array( $wpdb->posts, $wpdb->postmeta, $wpdb->terms, $wpdb->term_taxonomy, $wpdb->term_relationships, $wpdb->options );
+$un_engines = $wpdb->get_col( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('" . implode( "','", $un_tables ) . "')" );
+$un_count   = fn() => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'slim_snippet'" );
+$un_options = "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name IN ( 'slim_snippets_active', 'slim_snippets_testing', 'slim_snippets_version', 'slim_snippets_delete_data' )";
+if ( count( $un_tables ) === count( $un_engines ) && array( 'InnoDB' ) === array_unique( $un_engines ) ) {
+	$un_before  = array( $un_count(), (int) $wpdb->get_var( $un_options ) );
+	$wpdb->query( 'START TRANSACTION' );
+	$un_id      = $make( '$a = 1;' );
+	wp_update_post( wp_slash( array( 'ID' => $un_id, 'post_content' => '$a = 2;' ) ) ); // Makes a revision.
+	wp_set_object_terms( $un_id, 'slim check uninstall', 'slim_snippet_tag' );
+	$un_made    = array( count( wp_get_post_revisions( $un_id ) ) > 0, count( wp_get_object_terms( $un_id, 'slim_snippet_tag' ) ) );
+	update_option( 'slim_snippets_delete_data', true );
+	defined( 'WP_UNINSTALL_PLUGIN' ) || define( 'WP_UNINSTALL_PLUGIN', plugin_basename( SLIM_SNIPPETS_FILE ) );
+	include dirname( SLIM_SNIPPETS_FILE ) . '/uninstall.php';
+	$un_after   = array(
+		$un_count(),
+		(int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'revision' AND post_parent = {$un_id}" ),
+		(int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE post_id = {$un_id}" ),
+		(int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->term_relationships} WHERE object_id = {$un_id}" ),
+		(int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->term_taxonomy} WHERE taxonomy = 'slim_snippet_tag'" ),
+		(int) $wpdb->get_var( $un_options ),
+	);
+	$wpdb->query( 'ROLLBACK' );
+	wp_cache_flush();
+	$un_restored = array( $un_count(), (int) $wpdb->get_var( $un_options ) );
+	$check(
+		array( true, 1 ) === $un_made && array( 0, 0, 0, 0, 0, 0 ) === $un_after && $un_before === $un_restored,
+		'uninstall deletes snippets, revisions, meta, tag links, tags and options (rolled back): ' . wp_json_encode( array( $un_made, $un_after, $un_before, $un_restored ) )
+	);
+} else {
+	echo 'SKIP uninstall: a table is not InnoDB, so it cannot be rolled back: ' . wp_json_encode( $un_engines ) . "\n";
+}
+// phpcs:enable WordPress.DB
+
+// 30. While Code Snippets is active, an import activates nothing (the Trash is
 // still kept), and activation sees Code Snippets' active snippets, front-end
 // ones included, so a copy cannot redeclare one of their functions. On
 // multisite that includes network snippets that are active everywhere or

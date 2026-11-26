@@ -2,6 +2,9 @@
 
 Every release, newest first. `readme.txt` lists only the current release.
 
+= 1.3.0 | 2026-11-26 =
+* Added a setting to delete all snippets and tags when the plugin is deleted.
+
 = 1.2.8 | 2026-11-25 =
 * Updated the readme and changelog to be more concise.
 
