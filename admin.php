@@ -1046,8 +1046,61 @@ add_action(
 			'slim_snippets_import_page',
 			2 // After All Snippets and Add Snippet, before Tags.
 		);
+		add_submenu_page(
+			'edit.php?post_type=slim_snippet',
+			__( 'Snippets Settings', 'slim-snippets' ),
+			__( 'Settings', 'slim-snippets' ),
+			slim_snippets_cap(),
+			'slim-snippets-settings',
+			'slim_snippets_settings_page'
+		);
 	}
 );
+
+add_action(
+	'admin_init',
+	function () {
+		register_setting(
+			'slim-snippets',
+			'slim_snippets_delete_data',
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default'           => false,
+			)
+		);
+	}
+);
+// options.php checks manage_options unless told otherwise.
+add_filter( 'option_page_capability_slim-snippets', 'slim_snippets_cap' );
+
+/**
+ * Settings page. uninstall.php reads the setting.
+ */
+function slim_snippets_settings_page() {
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e( 'Snippets Settings', 'slim-snippets' ); ?></h1>
+		<?php settings_errors(); // Core shows "Settings saved." only on the Settings menu's own screens. ?>
+		<form method="post" action="options.php">
+			<?php settings_fields( 'slim-snippets' ); ?>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Uninstall', 'slim-snippets' ); ?></th>
+					<td>
+						<label><input type="checkbox" name="slim_snippets_delete_data" value="1"<?php checked( (bool) get_option( 'slim_snippets_delete_data' ) ); ?>> <?php esc_html_e( 'Delete all snippets and tags when the plugin is deleted', 'slim-snippets' ); ?></label>
+						<p class="description"><?php esc_html_e( 'Every snippet, including those in the Trash, is deleted with its revisions and tags. This cannot be undone. To keep a copy, export your snippets first on Snippets > Import / Export.', 'slim-snippets' ); ?></p>
+						<?php if ( is_multisite() ) : ?>
+							<p class="description"><?php esc_html_e( 'This applies to this site only.', 'slim-snippets' ); ?></p>
+						<?php endif; ?>
+					</td>
+				</tr>
+			</table>
+			<?php submit_button(); ?>
+		</form>
+	</div>
+	<?php
+}
 
 /**
  * Import / Export page.

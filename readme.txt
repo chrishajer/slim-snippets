@@ -87,7 +87,7 @@ That creates an inactive snippet, even with `--post_status=publish`, and `wp pos
 
 = What happens to my snippets if I delete the plugin? =
 
-They stay in the database, so reinstalling the plugin brings them back. Deleting the plugin removes only its own options. To remove the snippets too, move them to the Trash and empty it before you delete the plugin.
+They stay in the database, so reinstalling the plugin brings them back. Deleting the plugin removes only its own options. To delete the snippets and their tags too, turn on Delete all snippets and tags when the plugin is deleted on Snippets > Settings, then delete the plugin.
 
 == Credits ==
 
