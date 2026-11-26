@@ -1086,7 +1086,7 @@ function slim_snippets_settings_page() {
 			<?php settings_fields( 'slim-snippets' ); ?>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Uninstall', 'slim-snippets' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Clean up', 'slim-snippets' ); ?></th>
 					<td>
 						<label><input type="checkbox" name="slim_snippets_delete_data" value="1"<?php checked( (bool) get_option( 'slim_snippets_delete_data' ) ); ?>> <?php esc_html_e( 'Delete all snippets and tags when the plugin is deleted', 'slim-snippets' ); ?></label>
 						<p class="description">
