@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -104,7 +104,7 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.3.0 | 2026-11-26 =
-* Added a setting to delete all snippets and tags when the plugin is deleted.
+= 1.3.1 | 2026-11-26 =
+* Updated the Created and Modified columns to use the site's date and time formats.
 
 Older versions are listed in `changelog.txt`.
