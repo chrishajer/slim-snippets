@@ -31,7 +31,7 @@ register_shutdown_function(
 		}
 		delete_transient( 'slim_snippets_notices_' . get_current_user_id() );
 		slim_snippets_rebuild();
-		foreach ( array( 'alpha', 'beta', 'One', 'Two' ) as $name ) {
+		foreach ( array( 'alpha', 'beta', 'One', 'Two', 'slim check count' ) as $name ) {
 			$term = get_term_by( 'name', $name, 'slim_snippet_tag' );
 			if ( $term && 0 === (int) $term->count ) {
 				wp_delete_term( $term->term_id, 'slim_snippet_tag' );
@@ -511,7 +511,21 @@ $check(
 	'saving an active snippet that declares a function keeps it active: ' . wp_json_encode( array( get_post_status( $resave ), get_post_meta( $resave, '_slim_snippets_error', true ) ) )
 );
 
-// 28. While Code Snippets is active, an import activates nothing (the Trash is
+// 28. A tag's count includes inactive snippets and does not change when a
+// snippet is activated or deactivated.
+$tagged = $make( '// tagged' );
+wp_set_post_terms( $tagged, array( 'slim check count' ), 'slim_snippet_tag' );
+$tag_count = fn() => (int) get_term_by( 'name', 'slim check count', 'slim_snippet_tag' )->count;
+$counts    = array( $tag_count() );
+slim_snippets_set_status( $tagged, 'publish' );
+$counts[] = $tag_count();
+slim_snippets_set_status( $tagged, 'draft' );
+$counts[] = $tag_count();
+wp_trash_post( $tagged );
+$counts[] = $tag_count();
+$check( array( 1, 1, 1, 0 ) === $counts, 'tag count: inactive, active, inactive, trashed: ' . wp_json_encode( $counts ) );
+
+// 29. While Code Snippets is active, an import activates nothing (the Trash is
 // still kept), and activation sees Code Snippets' active snippets, front-end
 // ones included, so a copy cannot redeclare one of their functions. On
 // multisite that includes network snippets that are active everywhere or

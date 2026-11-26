@@ -10,3 +10,4 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 delete_option( 'slim_snippets_active' );
 delete_option( 'slim_snippets_testing' );
+delete_option( 'slim_snippets_version' );
