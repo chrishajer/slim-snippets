@@ -394,6 +394,29 @@ add_filter(
 );
 
 /*
+ * Tags screens. Tags only group and filter snippets, so the description that
+ * WordPress offers for every term has no use: hide its column on the Tags
+ * screen and its field there and on the Edit Tag screen.
+ */
+
+add_filter(
+	'manage_edit-slim_snippet_tag_columns',
+	function ( $columns ) {
+		unset( $columns['description'] );
+		return $columns;
+	}
+);
+
+/**
+ * Hide the Description field of the Add New Tag and Edit Tag forms.
+ */
+function slim_snippets_hide_tag_description() {
+	echo '<style>.term-description-wrap{display:none}</style>';
+}
+add_action( 'slim_snippet_tag_pre_add_form', 'slim_snippets_hide_tag_description' );
+add_action( 'slim_snippet_tag_pre_edit_form', 'slim_snippets_hide_tag_description' );
+
+/*
  * List screen.
  */
 

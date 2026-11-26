@@ -4,7 +4,7 @@ Tags: snippets, code, php, css, javascript
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.2.6
+Stable tag: 1.2.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,8 +106,7 @@ Thank you to the Code Snippets authors.
 
 == Changelog ==
 
-= 1.2.6 | 2026-11-25 =
-* Added a view to the snippet list, for example "Tag: Gravity Forms (33)", that shows when the list is filtered by a tag. Click All to clear it.
-* Fixed tag counts showing 0 on the Tags screen. A tag's count now includes inactive snippets, and existing counts are recalculated once after the update.
+= 1.2.7 | 2026-11-25 =
+* Removed the Description column from the Tags screen and the Description field from the Add New Tag and Edit Tag forms. Slim Snippets does not use tag descriptions.
 
 Older versions are listed in `changelog.txt`.
