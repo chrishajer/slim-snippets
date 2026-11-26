@@ -39,10 +39,9 @@ Every release, newest first. `readme.txt` lists only the current release.
 * Fixed a fatal error when a snippet redeclared a function or class from a Code Snippets front-end snippet.
 
 = 1.2.2 | 2026-11-25 =
+* Added security enhancements.
 * Updated the plugin description to mention migrating from the Code Snippets plugin.
 * Updated the Safe mode description.
-* Fixed snippets published outside the Snippets screen becoming active without the activation checks.
-* Removed snippets from Tools > Export.
 
 = 1.2.1 | 2026-11-25 =
 * Updated `readme.txt` and `README.md` for clarity and consistency.
@@ -60,12 +59,11 @@ Every release, newest first. `readme.txt` lists only the current release.
 * Fixed "Snippet not found." not being translatable.
 
 = 1.1.0 | 2026-11-24 =
-* Added support for `DISALLOW_UNFILTERED_HTML`.
+* Added security enhancements.
 * Updated the migration to activate an inactive copy already in Slim Snippets instead of skipping it.
 * Updated the migration to copy duplicate Code Snippets snippets once.
 * Updated the migration to keep the time with neither plugin running as short as possible.
 * Updated the migration notice and section to show only to users who can activate plugins.
-* Fixed an issue where a visitor could switch off a snippet by making it throw an error.
 * Fixed an issue where a search term with "$" or "\" did not find tags as typed.
 * Fixed a fatal error when a migrated copy redeclared a function or class.
 * Fixed a database error when the Code Snippets table is missing.
