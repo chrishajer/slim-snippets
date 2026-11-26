@@ -439,7 +439,6 @@ add_filter(
 add_action(
 	'manage_slim_snippet_posts_custom_column',
 	function ( $column, $id ) {
-		$format = __( 'Y/m/d g:i a', 'slim-snippets' );
 		switch ( $column ) {
 			case 'slim_scope':
 				$scopes = slim_snippets_scopes();
@@ -453,10 +452,11 @@ add_action(
 				echo (int) $id;
 				break;
 			case 'slim_created':
-				echo esc_html( get_the_date( $format, $id ) );
+				// The site's Date Format and Time Format from Settings > General.
+				echo esc_html( get_the_date( '', $id ) . ' ' . get_the_time( '', $id ) );
 				break;
 			case 'slim_modified':
-				echo esc_html( get_the_modified_date( $format, $id ) );
+				echo esc_html( get_the_modified_date( '', $id ) . ' ' . get_the_modified_time( '', $id ) );
 				break;
 		}
 	},
